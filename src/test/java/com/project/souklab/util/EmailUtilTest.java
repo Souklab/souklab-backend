@@ -43,6 +43,8 @@ class EmailUtilTest {
                         new String[]{"changed@test"}, new String[]{"admin@test"}, new String[]{"approved@test"},
                         new String[]{"granted@test"}, new String[]{"rejected@test"}, new String[]{"blocked@test"},
                         new String[]{"revoked@test"}, new String[]{"admin@test"});
+        assertThat(captor.getAllValues()).extracting(SimpleMailMessage::getFrom)
+                .containsOnly("support@souklab.dz");
     }
 
     @Test
@@ -149,9 +151,30 @@ class EmailUtilTest {
                 .isInstanceOf(RestClientException.class);
     }
 
+    @Test
+    void fallsBackToSenderEmailOrNoreplyWhenSupportEmailNotConfigured() {
+        JavaMailSender sender = mock(JavaMailSender.class);
+        AppProperties properties = new AppProperties();
+        properties.getEmail().setUseSmtp(true);
+        properties.getMailersend().setSenderEmail("mailer@test");
+        EmailUtil email = new EmailUtil(sender, properties, mock(RestTemplate.class));
+
+        email.sendVerificationCode("user@test", "123");
+        var captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(sender).send(captor.capture());
+        assertThat(captor.getValue().getFrom()).isEqualTo("mailer@test");
+
+        properties.getMailersend().setSenderEmail(null);
+        var secondCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        email.sendVerificationCode("user2@test", "456");
+        verify(sender, times(2)).send(secondCaptor.capture());
+        assertThat(secondCaptor.getValue().getFrom()).isEqualTo("noreply@souklab.dz");
+    }
+
     private AppProperties properties(boolean smtp) {
         AppProperties properties = new AppProperties();
         properties.getEmail().setUseSmtp(smtp);
+        properties.getSupport().setEmail("support@souklab.dz");
         properties.getMailersend().setApiKey("api-key");
         properties.getMailersend().setApiUrl("https://mailer.test/send");
         properties.getMailersend().setSenderEmail("sender@test");

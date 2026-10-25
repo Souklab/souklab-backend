@@ -59,6 +59,7 @@ public class EmailUtil {
 
         if (appProperties.getEmail().isUseSmtp()) {
             SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(resolveFromAddress());
             message.setTo(toEmail);
             message.setSubject(SUBJECT_ACCOUNT_VERIFICATION);
             message.setText("Your verification code is: " + code + "\nThis code expires soon.");
@@ -77,6 +78,7 @@ public class EmailUtil {
         if (appProperties.getEmail().isUseSmtp()) {
             try {
                 SimpleMailMessage message = new SimpleMailMessage();
+                message.setFrom(resolveFromAddress());
                 message.setTo(toEmail);
                 message.setSubject(SUBJECT_PASSWORD_RESET);
                 message.setText("Your Souklab verification code is: " + code + ". It expires in 15 minutes.");
@@ -108,6 +110,7 @@ public class EmailUtil {
         if (appProperties.getEmail().isUseSmtp()) {
             try {
                 SimpleMailMessage message = new SimpleMailMessage();
+                message.setFrom(resolveFromAddress());
                 message.setTo(toEmail);
                 message.setSubject(subject);
                 message.setText("Hello,\n\nWe received a password reset request for your Souklab account.\n\n" +
@@ -140,6 +143,7 @@ public class EmailUtil {
         if (appProperties.getEmail().isUseSmtp()) {
             try {
                 SimpleMailMessage message = new SimpleMailMessage();
+                message.setFrom(resolveFromAddress());
                 message.setTo(toEmail);
                 message.setSubject(subject);
                 message.setText("Hello,\n\nYour Souklab account password was successfully changed.\n\n" +
@@ -257,6 +261,7 @@ public class EmailUtil {
         if (appProperties.getEmail().isUseSmtp()) {
             try {
                 SimpleMailMessage message = new SimpleMailMessage();
+                message.setFrom(resolveFromAddress());
                 message.setTo(toEmail);
                 message.setSubject(subject);
                 message.setText(textContent);
@@ -274,6 +279,18 @@ public class EmailUtil {
         } catch (Exception ex) {
             LOGGER.error("Unexpected error while sending email via MailerSend to {}", toEmail, ex);
         }
+    }
+
+    private String resolveFromAddress() {
+        if (appProperties != null && appProperties.getSupport() != null && appProperties.getSupport().getEmail() != null
+                && !appProperties.getSupport().getEmail().isBlank()) {
+            return appProperties.getSupport().getEmail();
+        }
+        if (appProperties != null && appProperties.getMailersend() != null && appProperties.getMailersend().getSenderEmail() != null
+                && !appProperties.getMailersend().getSenderEmail().isBlank()) {
+            return appProperties.getMailersend().getSenderEmail();
+        }
+        return "noreply@souklab.dz";
     }
 
     private void sendViaMailerSend(String recipientEmail, String yourSubjectVariable, String yourHtmlContentVariable) {
