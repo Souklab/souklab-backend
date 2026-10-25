@@ -37,6 +37,10 @@ services:
       timeout: 5s
       retries: 30
       start_period: 45s
+    networks:
+      default:
+        aliases:
+          - backend
 
   mariadb:
     image: mariadb:11.4
@@ -161,6 +165,63 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
+
+  frontend:
+    build:
+      context: /home/walid/E/Coding/nextjs/souklab-frontend/frontend
+      dockerfile: Dockerfile
+    image: souklab-frontend:latest
+    container_name: ${COMPOSE_PROJECT_NAME:-souklab}_frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost}
+      BACKEND_URL: http://app:8080
+      BACKEND_PUBLIC_URL: ""
+      NEXT_PUBLIC_CHAT_URL: ""
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      app:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-souklab}_nginx
+    restart: unless-stopped
+    ports:
+      - "${NGINX_PORT:-80}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      frontend:
+        condition: service_started
+      app:
+        condition: service_healthy
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: ${COMPOSE_PROJECT_NAME:-souklab}_mailpit
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: ${COMPOSE_PROJECT_NAME:-souklab}_ngrok
+    restart: unless-stopped
+    command: ["http", "nginx:80"]
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
+    ports:
+      - "4040:4040"
+    depends_on:
+      - nginx
+    profiles:
+      - ngrok
 
 volumes:
   mariadb_data:
