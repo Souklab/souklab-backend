@@ -4,7 +4,6 @@ import java.io.IOException;
 
 import org.junit.jupiter.api.Test;
 
-import java.io.InputStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

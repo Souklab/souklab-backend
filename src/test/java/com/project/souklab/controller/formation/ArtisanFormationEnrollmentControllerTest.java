@@ -1,7 +1,6 @@
 package com.project.souklab.controller.formation;
 import org.hamcrest.Matchers;
 
-import com.project.souklab.controller.support.SecurityTestUtils;
 
 import com.project.souklab.controller.support.ControllerSliceTest;
 import com.project.souklab.dto.formation.FormationEnrollmentDetailDTO;
@@ -32,7 +31,6 @@ import java.util.List;
 import static com.project.souklab.controller.support.SecurityTestUtils.artisan;
 import static com.project.souklab.controller.support.SecurityTestUtils.client;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;

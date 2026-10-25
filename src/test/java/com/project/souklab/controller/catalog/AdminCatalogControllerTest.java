@@ -1,7 +1,6 @@
 package com.project.souklab.controller.catalog;
 
 import com.project.souklab.controller.support.ControllerSliceTest;
-import com.project.souklab.controller.support.SecurityTestUtils;
 import com.project.souklab.dto.catalog.EpoqueDTO;
 import com.project.souklab.dto.catalog.JobCategoryDTO;
 import com.project.souklab.dto.catalog.JobSubCategoryDTO;

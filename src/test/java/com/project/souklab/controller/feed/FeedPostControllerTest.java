@@ -1,5 +1,4 @@
 package com.project.souklab.controller.feed;
-import com.project.souklab.controller.support.SecurityTestUtils;
 
 import com.project.souklab.controller.support.ControllerSliceTest;
 import com.project.souklab.dto.common.PaginatedResponse;
@@ -9,7 +8,6 @@ import com.project.souklab.dto.feed.FeedPostLikeStatusDTO;
 import com.project.souklab.dto.feed.FeedPostLikerDTO;
 import com.project.souklab.dto.feed.FeedPostMediaResponseDTO;
 import com.project.souklab.dto.feed.FeedPostResponseDTO;
-import com.project.souklab.model.FeedPostType;
 import com.project.souklab.service.feed.FeedPostService;
 import com.project.souklab.service.feed.FeedEngagementService;
 import com.project.souklab.service.feed.FeedDiscoveryService;

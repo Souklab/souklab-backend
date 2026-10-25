@@ -17,7 +17,6 @@ import com.project.souklab.dto.common.ApiResponse;
 import com.project.souklab.dto.profile.ProfileResponse;
 import com.project.souklab.dto.profile.UserPatchDTO;
 import com.project.souklab.model.AccountStatus;
-import com.project.souklab.security.OAuth2AuthenticationSuccessHandler;
 import com.project.souklab.security.OAuthCookie;
 import com.project.souklab.service.auth.AuthService;
 import com.project.souklab.service.profile.ProfileService;

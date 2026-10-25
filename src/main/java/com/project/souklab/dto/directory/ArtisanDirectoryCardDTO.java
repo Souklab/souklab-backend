@@ -18,7 +18,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * Lightweight public directory card DTO representing an artisan in search results,

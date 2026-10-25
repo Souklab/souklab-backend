@@ -2,7 +2,6 @@ package com.project.souklab.filestorage.config;
 
 import java.util.List;
 
-import com.project.souklab.filestorage.StorageService;
 import com.project.souklab.filestorage.image.ImageProcessingService;
 import com.project.souklab.filestorage.scan.VirusScanService;
 import com.project.souklab.filestorage.scan.VirusScanner;
@@ -10,12 +9,10 @@ import com.project.souklab.filestorage.stub.InMemoryStorageService;
 import com.project.souklab.filestorage.validation.FileValidator;
 import org.apache.tika.Tika;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.util.unit.DataSize;
 import software.amazon.awssdk.services.s3.S3Client;
 
 import java.time.Clock;
-import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

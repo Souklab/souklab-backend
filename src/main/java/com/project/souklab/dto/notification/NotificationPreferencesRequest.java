@@ -1,6 +1,5 @@
 package com.project.souklab.dto.notification;
 
-import com.project.souklab.model.NotificationType;
 import jakarta.validation.constraints.NotNull;
 
 import java.util.Map;

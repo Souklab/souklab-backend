@@ -11,7 +11,6 @@ import com.project.souklab.dto.common.PaginatedResponse;
 import com.project.souklab.dto.feed.FeedPostCommentCreateDTO;
 import com.project.souklab.dto.feed.FeedPostResponseDTO;
 import com.project.souklab.exception.BadRequestException;
-import com.project.souklab.exception.ConflictException;
 import com.project.souklab.exception.ForbiddenException;
 import com.project.souklab.model.AccountStatus;
 import com.project.souklab.model.FeedPost;

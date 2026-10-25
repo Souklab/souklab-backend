@@ -1,5 +1,4 @@
 package com.project.souklab.controller.auth;
-import com.project.souklab.controller.support.SecurityTestUtils;
 import com.project.souklab.dto.auth.TokenType;
 
 import com.project.souklab.controller.support.ControllerSliceTest;
@@ -47,7 +46,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;

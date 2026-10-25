@@ -9,7 +9,6 @@ import com.project.souklab.dao.MaterialRepository;
 import com.project.souklab.dao.RegionRepository;
 import com.project.souklab.dao.TechniqueRepository;
 import com.project.souklab.dao.UserRepository;
-import com.project.souklab.model.AccountStatus;
 import com.project.souklab.model.AuthorizationPermission;
 import com.project.souklab.security.Permission;
 import com.project.souklab.util.EmailUtil;

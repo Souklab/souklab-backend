@@ -1,5 +1,4 @@
 package com.project.souklab.controller.review;
-import com.project.souklab.controller.support.SecurityTestUtils;
 
 import com.project.souklab.controller.support.ControllerSliceTest;
 import com.project.souklab.dto.review.ArtisanReviewResponseDTO;
@@ -18,7 +17,6 @@ import static com.project.souklab.controller.support.SecurityTestUtils.client;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
-import static org.hamcrest.Matchers.hasItem;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;

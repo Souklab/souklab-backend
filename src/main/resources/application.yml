@@ -58,21 +58,20 @@ spring:
       max-file-size: ${MULTIPART_MAX_FILE_SIZE}
       max-request-size: ${MULTIPART_MAX_REQUEST_SIZE}
   mail:
-    host: ${SMTP_HOST:smtp.gmail.com}
-    port: ${SMTP_PORT:587}
-    username: ${SMTP_USERNAME:}
-    password: ${SMTP_PASSWORD:}
+    host: ${SMTP_HOST}
+    port: ${SMTP_PORT}
+    username: ${SMTP_USERNAME}
+    password: ${SMTP_PASSWORD}
     properties:
       mail:
         smtp:
-          auth: ${SMTP_AUTH:true}
+          auth: ${SMTP_AUTH}
           starttls:
-            enable: ${SMTP_STARTTLS:true}
-          from: ${SMTP_USERNAME:}
-          connectiontimeout: ${SMTP_CONNECTION_TIMEOUT:5000}
-          timeout: ${SMTP_READ_TIMEOUT:10000}
-          writetimeout: ${SMTP_WRITE_TIMEOUT:10000}
-        debug: ${SPRING_MAIL_DEBUG:true}
+            enable: ${SMTP_STARTTLS}
+          from: ${SMTP_USERNAME}
+          connectiontimeout: ${SMTP_CONNECTION_TIMEOUT}
+          timeout: ${SMTP_READ_TIMEOUT}
+          writetimeout: ${SMTP_WRITE_TIMEOUT}
   security:
     oauth2:
       client:
@@ -302,8 +301,7 @@ app:
   favorites:
     max-per-client: ${FAVORITES_MAX_PER_CLIENT:500}
   email:
-    use-smtp: ${APP_EMAIL_USE_SMTP:true}
-    from: ${APP_EMAIL_FROM:${SMTP_USERNAME:}}
+    use-smtp: ${APP_EMAIL_USE_SMTP}
   mailersend:
     api-key: ${MAILERSEND_API_KEY}
     api-url: ${MAILERSEND_API_URL}
