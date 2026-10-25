@@ -52,18 +52,79 @@ public class OAuth2AuthenticationFailureHandler implements AuthenticationFailure
         log.warn("OAuth2 authentication failure: code={}, message={}", LogSanitizer.sanitize(errorCode),
                 LogSanitizer.sanitize(exception != null ? exception.getMessage() : null));
 
-        String callback = appProperties.getOauth().getGoogle().getAuthorizedRedirectUri();
-        if (callback == null || callback.isBlank()) {
-            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid redirect configuration");
-            return;
-        }
-
+        String callback = resolveAuthorizedRedirectUri(request);
         String targetUrl = UriComponentsBuilder.fromUriString(callback)
                 .queryParam("error", errorCode)
                 .build()
                 .toUriString();
 
         response.sendRedirect(targetUrl);
+    }
+
+    String resolveAuthorizedRedirectUri() {
+        return resolveAuthorizedRedirectUri(null);
+    }
+
+    String resolveAuthorizedRedirectUri(HttpServletRequest request) {
+        String configured = null;
+        if (appProperties != null && appProperties.getOauth() != null
+                && appProperties.getOauth().getGoogle() != null
+                && appProperties.getOauth().getGoogle().getAuthorizedRedirectUri() != null
+                && !appProperties.getOauth().getGoogle().getAuthorizedRedirectUri().isBlank()) {
+            configured = appProperties.getOauth().getGoogle().getAuthorizedRedirectUri().trim();
+        }
+        if (configured == null) {
+            configured = "http://localhost/connexion/google";
+        }
+
+        if (request != null && configured.startsWith("http://localhost")) {
+            String forwardedHost = request.getHeader("X-Forwarded-Host");
+            String host = null;
+            String proto = null;
+
+            if (forwardedHost != null && !forwardedHost.isBlank()) {
+                host = forwardedHost.split(",")[0].trim();
+                String forwardedProto = request.getHeader("X-Forwarded-Proto");
+                proto = (forwardedProto != null && !forwardedProto.isBlank())
+                        ? forwardedProto.split(",")[0].trim()
+                        : "http";
+            } else {
+                // When server.forward-headers-strategy=framework is enabled,
+                // Spring's ForwardedHeaderFilter consumes X-Forwarded-Host and populates serverName, serverPort, scheme
+                String serverName = request.getServerName();
+                if (serverName != null && !serverName.isBlank()
+                        && !serverName.equalsIgnoreCase("localhost")
+                        && !serverName.startsWith("0.0.0.0")
+                        && !serverName.equals("backend")
+                        && !serverName.equals("app")) {
+                    proto = request.getScheme();
+                    int serverPort = request.getServerPort();
+                    boolean isDefaultPort = (serverPort <= 0)
+                            || ("http".equalsIgnoreCase(proto) && serverPort == 80)
+                            || ("https".equalsIgnoreCase(proto) && (serverPort == 443 || serverPort == 80));
+                    host = isDefaultPort ? serverName : serverName + ":" + serverPort;
+                }
+            }
+
+            if (host != null && !host.isBlank()
+                    && !host.equalsIgnoreCase("localhost")
+                    && !host.equalsIgnoreCase("localhost:80")
+                    && !host.equalsIgnoreCase("localhost:8080")
+                    && !host.startsWith("0.0.0.0")) {
+                if (proto == null || proto.isBlank()) {
+                    proto = "http";
+                }
+                if ("https".equalsIgnoreCase(proto) && (host.endsWith(":80") || host.endsWith(":443"))) {
+                    host = host.substring(0, host.lastIndexOf(':'));
+                } else if ("http".equalsIgnoreCase(proto) && host.endsWith(":80")) {
+                    host = host.substring(0, host.lastIndexOf(':'));
+                }
+                String path = UriComponentsBuilder.fromUriString(configured).build().getPath();
+                return proto + "://" + host + (path != null ? path : "/connexion/google");
+            }
+        }
+
+        return configured;
     }
 
     private String resolveErrorCode(HttpServletRequest request, AuthenticationException exception) {

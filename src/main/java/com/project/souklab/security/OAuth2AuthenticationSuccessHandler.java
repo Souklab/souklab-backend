@@ -69,14 +69,14 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
             log.warn("OAuth2 process refused/failed: {}", exception.getMessage());
             clearIntentCookie(request, response);
             String errorCode = exception.getErrorCode() != null ? exception.getErrorCode() : "AUTH_FAILED";
-            String callback = appProperties.getOauth().getGoogle().getAuthorizedRedirectUri();
+            String callback = resolveAuthorizedRedirectUri(request);
             response.sendRedirect(UriComponentsBuilder.fromUriString(callback)
                     .queryParam("error", errorCode).build().toUriString());
             return;
         } catch (Exception exception) {
             log.error("OAuth2 authentication unexpected error", exception);
             clearIntentCookie(request, response);
-            String callback = appProperties.getOauth().getGoogle().getAuthorizedRedirectUri();
+            String callback = resolveAuthorizedRedirectUri(request);
             response.sendRedirect(UriComponentsBuilder.fromUriString(callback)
                     .queryParam("error", "AUTH_FAILED").build().toUriString());
             return;
@@ -91,9 +91,75 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
             return;
         }
         String code = authorizationCodeStore.put(jwtResponse);
-        String callback = appProperties.getOauth().getGoogle().getAuthorizedRedirectUri();
+        String callback = resolveAuthorizedRedirectUri(request);
         response.sendRedirect(UriComponentsBuilder.fromUriString(callback)
                 .queryParam("code", code).build().toUriString());
+    }
+
+    String resolveAuthorizedRedirectUri() {
+        return resolveAuthorizedRedirectUri(null);
+    }
+
+    String resolveAuthorizedRedirectUri(HttpServletRequest request) {
+        String configured = null;
+        if (appProperties != null && appProperties.getOauth() != null
+                && appProperties.getOauth().getGoogle() != null
+                && appProperties.getOauth().getGoogle().getAuthorizedRedirectUri() != null
+                && !appProperties.getOauth().getGoogle().getAuthorizedRedirectUri().isBlank()) {
+            configured = appProperties.getOauth().getGoogle().getAuthorizedRedirectUri().trim();
+        }
+        if (configured == null) {
+            configured = "http://localhost/connexion/google";
+        }
+
+        if (request != null && configured.startsWith("http://localhost")) {
+            String forwardedHost = request.getHeader("X-Forwarded-Host");
+            String host = null;
+            String proto = null;
+
+            if (forwardedHost != null && !forwardedHost.isBlank()) {
+                host = forwardedHost.split(",")[0].trim();
+                String forwardedProto = request.getHeader("X-Forwarded-Proto");
+                proto = (forwardedProto != null && !forwardedProto.isBlank())
+                        ? forwardedProto.split(",")[0].trim()
+                        : "http";
+            } else {
+                // When server.forward-headers-strategy=framework is enabled,
+                // Spring's ForwardedHeaderFilter consumes X-Forwarded-Host and populates serverName, serverPort, scheme
+                String serverName = request.getServerName();
+                if (serverName != null && !serverName.isBlank()
+                        && !serverName.equalsIgnoreCase("localhost")
+                        && !serverName.startsWith("0.0.0.0")
+                        && !serverName.equals("backend")
+                        && !serverName.equals("app")) {
+                    proto = request.getScheme();
+                    int serverPort = request.getServerPort();
+                    boolean isDefaultPort = (serverPort <= 0)
+                            || ("http".equalsIgnoreCase(proto) && serverPort == 80)
+                            || ("https".equalsIgnoreCase(proto) && (serverPort == 443 || serverPort == 80));
+                    host = isDefaultPort ? serverName : serverName + ":" + serverPort;
+                }
+            }
+
+            if (host != null && !host.isBlank()
+                    && !host.equalsIgnoreCase("localhost")
+                    && !host.equalsIgnoreCase("localhost:80")
+                    && !host.equalsIgnoreCase("localhost:8080")
+                    && !host.startsWith("0.0.0.0")) {
+                if (proto == null || proto.isBlank()) {
+                    proto = "http";
+                }
+                if ("https".equalsIgnoreCase(proto) && (host.endsWith(":80") || host.endsWith(":443"))) {
+                    host = host.substring(0, host.lastIndexOf(':'));
+                } else if ("http".equalsIgnoreCase(proto) && host.endsWith(":80")) {
+                    host = host.substring(0, host.lastIndexOf(':'));
+                }
+                String path = UriComponentsBuilder.fromUriString(configured).build().getPath();
+                return proto + "://" + host + (path != null ? path : "/connexion/google");
+            }
+        }
+
+        return configured;
     }
 
     private String extractIntentRole(HttpServletRequest request) {
