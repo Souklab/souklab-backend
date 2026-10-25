@@ -66,7 +66,10 @@ def download_image(url, filename, is_wiki=False):
             time.sleep(1.5)
     
     # Fallback to local landing page image if download failed
-    landing_fallback = "/home/walid/E/Coding/nextjs/souklab-frontend/frontend/public/assets/landing/hero-background.jpg"
+    landing_fallback = os.environ.get(
+        "FRONTEND_LANDING_IMAGE",
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../nextjs/souklab-frontend/frontend/public/assets/landing/hero-background.jpg")
+    )
     if os.path.exists(landing_fallback):
         with open(landing_fallback, "rb") as sf, open(target, "wb") as df:
             df.write(sf.read())
@@ -261,13 +264,17 @@ for filename, url, is_wiki in IMAGE_SPECS:
 log("Image collection prepared.")
 
 # Copy local landing images as additional backups
-landing_dir = "/home/walid/E/Coding/nextjs/souklab-frontend/frontend/public/assets/landing"
-for lf in os.listdir(landing_dir):
-    src = os.path.join(landing_dir, lf)
-    dst = os.path.join(IMAGES_DIR, f"landing_{lf}")
-    if os.path.isfile(src) and not os.path.exists(dst):
-        with open(src, "rb") as rf, open(dst, "wb") as wf:
-            wf.write(rf.read())
+landing_dir = os.environ.get(
+    "FRONTEND_LANDING_DIR",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../nextjs/souklab-frontend/frontend/public/assets/landing")
+)
+if os.path.isdir(landing_dir):
+    for lf in os.listdir(landing_dir):
+        src = os.path.join(landing_dir, lf)
+        dst = os.path.join(IMAGES_DIR, f"landing_{lf}")
+        if os.path.isfile(src) and not os.path.exists(dst):
+            with open(src, "rb") as rf, open(dst, "wb") as wf:
+                wf.write(rf.read())
 
 # --- 2. ADMIN LOGIN & CATALOG LOOKUPS ---
 log("Authenticating Administrator...")
@@ -1186,8 +1193,17 @@ log("Client accounts and favorites seeded.")
 # --- 10. REINDEX ELASTICSEARCH ---
 log("Triggering mass sync for Elasticsearch...")
 try:
-    log("Restarting backend container to execute Hibernate Search mass indexing on startup...")
-    subprocess.run(["docker", "compose", "-f", "/home/walid/E/Coding/nextjs/souklab-frontend/docker-compose.yml", "restart", "backend"], check=True)
+    compose_file = os.environ.get("COMPOSE_FILE")
+    if not compose_file:
+        for candidate in [
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "docker-compose.yml"),
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../nextjs/souklab-frontend/docker-compose.yml"),
+        ]:
+            if os.path.isfile(candidate):
+                compose_file = candidate
+                break
+    if compose_file:
+        subprocess.run(["docker", "compose", "-f", compose_file, "restart", "backend"], check=True)
     log("Waiting for backend container to become ready...")
     for _ in range(45):
         time.sleep(2)

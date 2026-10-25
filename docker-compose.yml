@@ -168,7 +168,7 @@ services:
 
   frontend:
     build:
-      context: /home/walid/E/Coding/nextjs/souklab-frontend/frontend
+      context: ${FRONTEND_PATH:-../../nextjs/souklab-frontend/frontend}
       dockerfile: Dockerfile
     image: souklab-frontend:latest
     container_name: ${COMPOSE_PROJECT_NAME:-souklab}_frontend
