@@ -15,12 +15,12 @@ import java.net.Socket;
 @Profile({"prod", "production"})
 public class RelayHealthIndicator implements HealthIndicator {
 
-    private final AppProperties.Relay properties;
+    private final RelayProperties properties;
     private final OperationalMetrics metrics;
     private final HealthProperties healthProperties;
 
-    public RelayHealthIndicator(AppProperties appProperties, OperationalMetrics metrics, HealthProperties healthProperties) {
-        this.properties = appProperties.getRelay();
+    public RelayHealthIndicator(RelayProperties relayProperties, OperationalMetrics metrics, HealthProperties healthProperties) {
+        this.properties = relayProperties;
         this.metrics = metrics;
         this.healthProperties = healthProperties;
     }

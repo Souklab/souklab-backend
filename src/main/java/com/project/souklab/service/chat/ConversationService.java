@@ -9,7 +9,8 @@ import com.project.souklab.analytics.AnalyticsEvent;
 import com.project.souklab.analytics.AnalyticsMetadata;
 
 import com.project.souklab.analytics.ActivityEventService;
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.AppStorageProperties;
+import com.project.souklab.config.ChatProperties;
 import com.project.souklab.dao.ConversationParticipantRepository;
 import com.project.souklab.dao.ConversationRepository;
 import com.project.souklab.dao.MessageRepository;
@@ -60,7 +61,8 @@ public class ConversationService {
     private final CurrentUserProvider currentUserProvider;
     private final NotificationService notificationService;
     private final SimpMessagingTemplate messagingTemplate;
-    private final AppProperties properties;
+    private final ChatProperties chatProperties;
+    private final AppStorageProperties appStorageProperties;
     private final Clock clock;
     private final StorageService storageService;
     private final FileValidator fileValidator;
@@ -116,8 +118,8 @@ public class ConversationService {
     public MessagePageResponse messages(String id, String cursor, int size) {
         User current = requireCurrentUser(false);
         Conversation c = requireParticipant(id, current);
-        int requestedSize = size <= 0 ? properties.getChat().getDefaultPageSize() : size;
-        int safeSize = Math.min(Math.max(requestedSize, properties.getChat().getMinPageSize()), properties.getChat().getMaxPageSize());
+        int requestedSize = size <= 0 ? chatProperties.getDefaultPageSize() : size;
+        int safeSize = Math.min(Math.max(requestedSize, chatProperties.getMinPageSize()), chatProperties.getMaxPageSize());
         Page<Message> page;
         MessageCursor decoded = decodeCursor(cursor);
         PageRequest request = PageRequest.of(0, safeSize, Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.DESC, "id")));
@@ -132,10 +134,10 @@ public class ConversationService {
         Conversation c = requireParticipant(id, current);
         Message existing = messageRepository.findByConversationAndAuthorAndIdempotencyKeyAndDeletedAtIsNull(c, current, request.idempotencyKey()).orElse(null);
         if (existing != null) return toMessage(existing);
-        if (request.attachmentKeys() != null && request.attachmentKeys().size() > properties.getChat().getAttachmentMaxCount()) throw new BadRequestException("Too many attachments");
+        if (request.attachmentKeys() != null && request.attachmentKeys().size() > chatProperties.getAttachmentMaxCount()) throw new BadRequestException("Too many attachments");
         String content = request.content() == null ? "" : request.content();
         if (content.isBlank() && (request.attachmentKeys() == null || request.attachmentKeys().isEmpty())) throw new BadRequestException("Message content or at least one attachment is required");
-        if (content.length() > properties.getChat().getMessageMaxLength()) throw new BadRequestException("Message content exceeds configured limit");
+        if (content.length() > chatProperties.getMessageMaxLength()) throw new BadRequestException("Message content exceeds configured limit");
         Message message = new Message();
         message.setConversation(c);
         message.setAuthor(current);
@@ -172,7 +174,7 @@ public class ConversationService {
         User current = requireCurrentUser(true); Conversation c = requireParticipant(conversationId, current);
         Message message = messageRepository.findByIdAndConversationAndDeletedAtIsNull(messageId, c).orElseThrow(() -> new ResourceNotFoundException("Message not found"));
         if (!message.getAuthor().getId().equals(current.getId())) throw new ForbiddenException("Only the author may edit this message");
-        if (request.content().length() > properties.getChat().getMessageMaxLength()) throw new BadRequestException("Message content exceeds configured limit");
+        if (request.content().length() > chatProperties.getMessageMaxLength()) throw new BadRequestException("Message content exceeds configured limit");
         message.setContent(request.content()); message.setEditedAt(LocalDateTime.now(clock));
         dispatch(c, ChatEventType.Message.UPDATED, message, null); return toMessage(message);
     }
@@ -204,17 +206,17 @@ public class ConversationService {
         Instant now = clock.instant();
         if (typing) {
             Instant previous = lastTypingEvent.putIfAbsent(current.getId() + ":" + conversationId, now);
-            if (previous != null && now.isBefore(previous.plus(properties.getChat().getTypingEventInterval()))) return;
+            if (previous != null && now.isBefore(previous.plus(chatProperties.getTypingEventInterval()))) return;
             lastTypingEvent.put(current.getId() + ":" + conversationId, now);
         } else {
             lastTypingEvent.remove(current.getId() + ":" + conversationId);
         }
         User recipient = otherParticipant(conversation, current).getUser();
         ChatEventType.Type eventType = typing ? ChatEventType.Typing.STARTED : ChatEventType.Typing.STOPPED;
-        ChatEvent event = ChatEvent.create(properties.getChat().getWebsocketProtocolVersion(), eventType,
+        ChatEvent event = ChatEvent.create(chatProperties.getWebsocketProtocolVersion(), eventType,
                 conversationId, null, correlationId, LocalDateTime.now(clock),
                 Map.of(ChatMetadata.Typing.USERNAME, current.getId(), ChatMetadata.Typing.TYPING, typing));
-        messagingTemplate.convertAndSendToUser(recipient.getEmail(), properties.getChat().getMessageDestinationPrefix(), event);
+        messagingTemplate.convertAndSendToUser(recipient.getEmail(), chatProperties.getMessageDestinationPrefix(), event);
     }
 
     @Transactional
@@ -316,11 +318,11 @@ public class ConversationService {
                         a.getOriginalFilename(),
                         a.getContentType(),
                         a.getSize(),
-                        properties.getStorage().toUrl(a.getStorageKey()))).toList());
+                        appStorageProperties.toUrl(a.getStorageKey()))).toList());
     }
 
     private String encodeCursor(Message message) {
-        LocalDateTime expiry = LocalDateTime.now(clock).plus(properties.getChat().getCursorLifetime());
+        LocalDateTime expiry = LocalDateTime.now(clock).plus(chatProperties.getCursorLifetime());
         String value = message.getCreatedAt() + "|" + message.getId() + "|" + expiry;
         return Base64.getUrlEncoder().withoutPadding().encodeToString(value.getBytes(StandardCharsets.UTF_8));
     }
@@ -340,13 +342,13 @@ public class ConversationService {
     }
 
     private void dispatch(Conversation c, ChatEventType.Type type, Message m, String correlationId) {
-        ChatEvent event = ChatEvent.create(properties.getChat().getWebsocketProtocolVersion(), type,
+        ChatEvent event = ChatEvent.create(chatProperties.getWebsocketProtocolVersion(), type,
                 c.getId(), m.getId(), correlationId, LocalDateTime.now(clock), toMessage(m));
         dispatchAfterCommit(c, event);
     }
 
     private void dispatchRead(Conversation c, Message message, User reader) {
-        ChatEvent event = ChatEvent.create(properties.getChat().getWebsocketProtocolVersion(), ChatEventType.Read.UpTo.EVENT,
+        ChatEvent event = ChatEvent.create(chatProperties.getWebsocketProtocolVersion(), ChatEventType.Read.UpTo.EVENT,
                 c.getId(), message.getId(), null, LocalDateTime.now(clock),
                 Map.of(ChatMetadata.Read.READER, reader.getId(), ChatMetadata.Read.MESSAGE_ID, message.getId()));
         dispatchAfterCommit(c, event);
@@ -363,7 +365,7 @@ public class ConversationService {
     private void send(Conversation c, ChatEvent event) {
         for (ConversationParticipant p : c.getParticipants()) {
             try {
-                messagingTemplate.convertAndSendToUser(p.getUser().getEmail(), properties.getChat().getEventDestination(), event);
+                messagingTemplate.convertAndSendToUser(p.getUser().getEmail(), chatProperties.getEventDestination(), event);
             } catch (Exception e) {
                 log.warn("Chat event delivery failed", e);
             }

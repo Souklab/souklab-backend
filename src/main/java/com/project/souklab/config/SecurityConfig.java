@@ -54,7 +54,8 @@ public class SecurityConfig {
         return registration;
     }
 
-    private final AppProperties appProperties;
+    private final CorsProperties corsProperties;
+    private final ChargilyProperties chargilyProperties;
     private final StorageProperties storageProperties;
     private final AvatarProperties avatarProperties;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -93,7 +94,7 @@ public class SecurityConfig {
 
     @Bean
     public ChargilyWebhookSizeFilter chargilyWebhookSizeFilter() {
-        return new ChargilyWebhookSizeFilter(appProperties, servletResponseUtil);
+        return new ChargilyWebhookSizeFilter(chargilyProperties, servletResponseUtil);
     }
 
     @Bean
@@ -234,7 +235,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(appProperties.getCors().getAllowedOrigins());
+        configuration.setAllowedOriginPatterns(corsProperties.getAllowedOrigins());
         configuration.setAllowedMethods(Arrays.stream(new HttpMethod[]{
                 HttpMethod.GET, HttpMethod.POST, HttpMethod.PUT, HttpMethod.PATCH,
                 HttpMethod.DELETE, HttpMethod.OPTIONS

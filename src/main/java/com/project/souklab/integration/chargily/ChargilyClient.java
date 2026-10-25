@@ -3,7 +3,6 @@ package com.project.souklab.integration.chargily;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.project.souklab.config.AppProperties;
 import com.project.souklab.config.ChargilyProperties;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
@@ -24,14 +23,14 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class ChargilyClient implements ChargilyCheckoutClient {
     private final WebClient.Builder webClientBuilder;
-    private final AppProperties appProperties;
+    private final ChargilyProperties chargilyProperties;
     private final ObjectMapper objectMapper;
     private final ChargilyResponseMapper responseMapper = new ChargilyResponseMapper();
     private final ChargilyErrorClassifier errorClassifier = new ChargilyErrorClassifier();
 
     @Override
     public ChargilyCheckoutResponse createCheckout(ChargilyCheckoutRequest request) {
-        ChargilyProperties properties = appProperties.getChargily();
+        ChargilyProperties properties = chargilyProperties;
         for (int attempt = 0; attempt <= properties.getRetryCount(); attempt++) {
             try {
                 String responseBody = client(properties).post()

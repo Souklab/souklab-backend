@@ -2,8 +2,8 @@ package com.project.souklab.security;
 
 import java.util.List;
 
-import com.project.souklab.config.AppProperties;
 import com.project.souklab.config.RateLimitEndpointProperties;
+import com.project.souklab.config.RateLimitProperties;
 import com.project.souklab.util.ServletResponseUtil;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
@@ -31,10 +31,10 @@ class UserRateLimitFilterTest {
 
     @Test
     void usesAnalyticsEndpointUserOverrideAndNamespacedUserKey() throws Exception {
-        AppProperties properties = new AppProperties();
-        properties.getRateLimit().setUserEnabled(true);
-        properties.getRateLimit().setUserCapacity(10);
-        properties.getRateLimit().setUserRefillDuration(Duration.ofMinutes(1));
+        RateLimitProperties properties = new RateLimitProperties();
+        properties.setUserEnabled(true);
+        properties.setUserCapacity(10);
+        properties.setUserRefillDuration(Duration.ofMinutes(1));
         RateLimitEndpointProperties endpoints = new RateLimitEndpointProperties();
         endpoints.getAnalyticsJobs().setEnabled(true);
         endpoints.getAnalyticsJobs().setUserCapacity(1);

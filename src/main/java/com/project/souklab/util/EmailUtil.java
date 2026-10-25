@@ -1,6 +1,8 @@
 package com.project.souklab.util;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.EmailProperties;
+import com.project.souklab.config.MailerSendProperties;
+import com.project.souklab.config.SupportProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.slf4j.Logger;
@@ -28,14 +30,21 @@ public class EmailUtil {
     private static final String SUBJECT_PASSWORD_RESET = "Password reset verification code";
 
     private final JavaMailSender mailSender;
-    private final AppProperties appProperties;
+    private final EmailProperties emailProperties;
+    private final SupportProperties supportProperties;
+    private final MailerSendProperties mailerSendProperties;
     private final RestTemplate restTemplate;
 
     @Autowired
-    public EmailUtil(JavaMailSender mailSender, AppProperties appProperties,
+    public EmailUtil(JavaMailSender mailSender,
+                     EmailProperties emailProperties,
+                     SupportProperties supportProperties,
+                     MailerSendProperties mailerSendProperties,
                      @Qualifier("mailerSendRestTemplate") RestTemplate restTemplate) {
         this.mailSender = mailSender;
-        this.appProperties = appProperties;
+        this.emailProperties = emailProperties;
+        this.supportProperties = supportProperties;
+        this.mailerSendProperties = mailerSendProperties;
         this.restTemplate = restTemplate;
     }
 
@@ -56,30 +65,32 @@ public class EmailUtil {
     public void sendVerificationCodeSynchronous(String toEmail, String code) {
         String subject = SUBJECT_ACCOUNT_VERIFICATION;
         String htmlContent = "<p>Your verification code is: <strong>" + code + "</strong></p><p>This code expires soon.</p>";
+        String recipient = toEmail != null ? toEmail.trim() : null;
 
-        if (appProperties.getEmail().isUseSmtp()) {
+        if (isSmtpEnabled()) {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(resolveFromAddress());
-            message.setTo(toEmail);
+            message.setTo(recipient);
             message.setSubject(SUBJECT_ACCOUNT_VERIFICATION);
             message.setText("Your verification code is: " + code + "\nThis code expires soon.");
             mailSender.send(message);
             return;
         }
 
-        sendViaMailerSend(toEmail, subject, htmlContent);
+        sendViaMailerSend(recipient, subject, htmlContent);
     }
 
     @Async(APPLICATION_TASK_EXECUTOR)
     public void sendPasswordResetCode(String toEmail, String code) {
         String subject = SUBJECT_PASSWORD_RESET;
         String htmlContent = "<p>Your Souklab verification code is: <strong>" + code + "</strong>.</p><p>It expires in 15 minutes.</p>";
+        String recipient = toEmail != null ? toEmail.trim() : null;
 
-        if (appProperties.getEmail().isUseSmtp()) {
+        if (isSmtpEnabled()) {
             try {
                 SimpleMailMessage message = new SimpleMailMessage();
                 message.setFrom(resolveFromAddress());
-                message.setTo(toEmail);
+                message.setTo(recipient);
                 message.setSubject(SUBJECT_PASSWORD_RESET);
                 message.setText("Your Souklab verification code is: " + code + ". It expires in 15 minutes.");
                 mailSender.send(message);
@@ -90,7 +101,7 @@ public class EmailUtil {
         }
 
         try {
-            sendViaMailerSend(toEmail, subject, htmlContent);
+            sendViaMailerSend(recipient, subject, htmlContent);
         } catch (RestClientException ex) {
             LOGGER.error("Failed to send password reset email via MailerSend to {}", toEmail, ex);
         } catch (Exception ex) {
@@ -106,12 +117,13 @@ public class EmailUtil {
                 "<p>Your account is linked to Google Sign-In and does not use a separate password. " +
                 "Please continue signing in directly with Google.</p>" +
                 "<p>If you did not request this, you can safely ignore this email.</p>";
+        String recipient = toEmail != null ? toEmail.trim() : null;
 
-        if (appProperties.getEmail().isUseSmtp()) {
+        if (isSmtpEnabled()) {
             try {
                 SimpleMailMessage message = new SimpleMailMessage();
                 message.setFrom(resolveFromAddress());
-                message.setTo(toEmail);
+                message.setTo(recipient);
                 message.setSubject(subject);
                 message.setText("Hello,\n\nWe received a password reset request for your Souklab account.\n\n" +
                         "Your account is linked to Google Sign-In and does not use a separate password. " +
@@ -125,7 +137,7 @@ public class EmailUtil {
         }
 
         try {
-            sendViaMailerSend(toEmail, subject, htmlContent);
+            sendViaMailerSend(recipient, subject, htmlContent);
         } catch (RestClientException ex) {
             LOGGER.error("Failed to send OAuth password reset notice email via MailerSend to {}", toEmail, ex);
         } catch (Exception ex) {
@@ -139,12 +151,13 @@ public class EmailUtil {
         String htmlContent = "<p>Hello,</p>" +
                 "<p>Your Souklab account password was successfully changed.</p>" +
                 "<p>If you did not make this change, please contact support immediately.</p>";
+        String recipient = toEmail != null ? toEmail.trim() : null;
 
-        if (appProperties.getEmail().isUseSmtp()) {
+        if (isSmtpEnabled()) {
             try {
                 SimpleMailMessage message = new SimpleMailMessage();
                 message.setFrom(resolveFromAddress());
-                message.setTo(toEmail);
+                message.setTo(recipient);
                 message.setSubject(subject);
                 message.setText("Hello,\n\nYour Souklab account password was successfully changed.\n\n" +
                         "If you did not make this change, please contact support immediately.");
@@ -156,7 +169,7 @@ public class EmailUtil {
         }
 
         try {
-            sendViaMailerSend(toEmail, subject, htmlContent);
+            sendViaMailerSend(recipient, subject, htmlContent);
         } catch (RestClientException ex) {
             LOGGER.error("Failed to send password changed notice email via MailerSend to {}", toEmail, ex);
         } catch (Exception ex) {
@@ -258,11 +271,13 @@ public class EmailUtil {
     }
 
     private void sendEmail(String toEmail, String subject, String textContent, String htmlContent) {
-        if (appProperties.getEmail().isUseSmtp()) {
+        String recipient = toEmail != null ? toEmail.trim() : null;
+
+        if (isSmtpEnabled()) {
             try {
                 SimpleMailMessage message = new SimpleMailMessage();
                 message.setFrom(resolveFromAddress());
-                message.setTo(toEmail);
+                message.setTo(recipient);
                 message.setSubject(subject);
                 message.setText(textContent);
                 mailSender.send(message);
@@ -273,7 +288,7 @@ public class EmailUtil {
         }
 
         try {
-            sendViaMailerSend(toEmail, subject, htmlContent);
+            sendViaMailerSend(recipient, subject, htmlContent);
         } catch (RestClientException ex) {
             LOGGER.error("Failed to send email via MailerSend to {}", toEmail, ex);
         } catch (Exception ex) {
@@ -282,30 +297,38 @@ public class EmailUtil {
     }
 
     private String resolveFromAddress() {
-        if (appProperties != null && appProperties.getSupport() != null && appProperties.getSupport().getEmail() != null
-                && !appProperties.getSupport().getEmail().isBlank()) {
-            return appProperties.getSupport().getEmail();
+        if (emailProperties != null && emailProperties.getFrom() != null
+                && !emailProperties.getFrom().isBlank()) {
+            return emailProperties.getFrom().trim();
         }
-        if (appProperties != null && appProperties.getMailersend() != null && appProperties.getMailersend().getSenderEmail() != null
-                && !appProperties.getMailersend().getSenderEmail().isBlank()) {
-            return appProperties.getMailersend().getSenderEmail();
+        if (supportProperties != null && supportProperties.getEmail() != null
+                && !supportProperties.getEmail().isBlank()) {
+            return supportProperties.getEmail().trim();
+        }
+        if (mailerSendProperties != null && mailerSendProperties.getSenderEmail() != null
+                && !mailerSendProperties.getSenderEmail().isBlank()) {
+            return mailerSendProperties.getSenderEmail().trim();
         }
         return "noreply@souklab.dz";
     }
 
+    private boolean isSmtpEnabled() {
+        return emailProperties != null && emailProperties.isUseSmtp();
+    }
+
     private void sendViaMailerSend(String recipientEmail, String yourSubjectVariable, String yourHtmlContentVariable) {
         HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Bearer " + appProperties.getMailersend().getApiKey());
+        headers.set("Authorization", "Bearer " + mailerSendProperties.getApiKey());
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         Map<String, Object> payload = Map.of(
-                "from", Map.of("email", appProperties.getMailersend().getSenderEmail(), "name", appProperties.getMailersend().getSenderName()),
+                "from", Map.of("email", mailerSendProperties.getSenderEmail(), "name", mailerSendProperties.getSenderName()),
                 "to", List.of(Map.of("email", recipientEmail)),
                 "subject", yourSubjectVariable,
                 "html", yourHtmlContentVariable
         );
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(payload, headers);
-        restTemplate.postForEntity(appProperties.getMailersend().getApiUrl(), entity, String.class);
+        restTemplate.postForEntity(mailerSendProperties.getApiUrl(), entity, String.class);
     }
 }

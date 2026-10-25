@@ -3,8 +3,7 @@ import java.util.Map;
 import org.springframework.messaging.MessageHeaders;
 
 import com.project.souklab.dto.chat.ChatEvent;
-
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.ChatProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.socket.messaging.SessionConnectedEvent;
@@ -24,7 +23,7 @@ class ChatPresenceServiceTest {
     @Test
     void lifecycleEventsWithoutAuthenticatedPrincipalAreIgnored() {
         SimpMessagingTemplate template = mock(SimpMessagingTemplate.class);
-        ChatPresenceService service = new ChatPresenceService(template, new AppProperties(), Clock.systemUTC());
+        ChatPresenceService service = new ChatPresenceService(template, new ChatProperties(), Clock.systemUTC());
         SessionConnectedEvent connected = mock(SessionConnectedEvent.class);
         SessionDisconnectEvent disconnected = mock(SessionDisconnectEvent.class);
         when(connected.getMessage()).thenReturn(null);
@@ -38,9 +37,9 @@ class ChatPresenceServiceTest {
     void emitsOnlineForFirstSessionAndOfflineAfterLastSessionToPartnersOnly() {
         SimpMessagingTemplate template = mock(SimpMessagingTemplate.class);
         ConversationParticipantRepository participantRepository = mock(ConversationParticipantRepository.class);
-        AppProperties properties = new AppProperties();
-        properties.getChat().setPresenceDestination("/topic/presence");
-        properties.getChat().setWebsocketProtocolVersion("v1");
+        ChatProperties properties = new ChatProperties();
+        properties.setPresenceDestination("/topic/presence");
+        properties.setWebsocketProtocolVersion("v1");
         ChatPresenceService service = new ChatPresenceService(template, properties, Clock.systemUTC(), participantRepository);
         Message<byte[]> message = userMessage("user@test");
         SessionConnectedEvent connected = mock(SessionConnectedEvent.class);
@@ -61,9 +60,9 @@ class ChatPresenceServiceTest {
     void userWithoutConversationPartnersDoesNotEmitPresence() {
         SimpMessagingTemplate template = mock(SimpMessagingTemplate.class);
         ConversationParticipantRepository participantRepository = mock(ConversationParticipantRepository.class);
-        AppProperties properties = new AppProperties();
-        properties.getChat().setPresenceDestination("/topic/presence");
-        properties.getChat().setWebsocketProtocolVersion("v1");
+        ChatProperties properties = new ChatProperties();
+        properties.setPresenceDestination("/topic/presence");
+        properties.setWebsocketProtocolVersion("v1");
         ChatPresenceService service = new ChatPresenceService(template, properties, Clock.systemUTC(), participantRepository);
         Message<byte[]> message = userMessage("lonely@test");
         SessionConnectedEvent connected = mock(SessionConnectedEvent.class);
@@ -78,7 +77,7 @@ class ChatPresenceServiceTest {
     @Test
     void messageWithoutUserIsIgnored() {
         SimpMessagingTemplate template = mock(SimpMessagingTemplate.class);
-        ChatPresenceService service = new ChatPresenceService(template, new AppProperties(), Clock.systemUTC());
+        ChatPresenceService service = new ChatPresenceService(template, new ChatProperties(), Clock.systemUTC());
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.CONNECTED);
         service.connected(new SessionConnectedEvent(this, MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders())));
         verifyNoInteractions(template);
@@ -87,7 +86,7 @@ class ChatPresenceServiceTest {
     @Test
     void messageWithoutStompHeadersIsIgnored() {
         SimpMessagingTemplate template = mock(SimpMessagingTemplate.class);
-        ChatPresenceService service = new ChatPresenceService(template, new AppProperties(), Clock.systemUTC());
+        ChatPresenceService service = new ChatPresenceService(template, new ChatProperties(), Clock.systemUTC());
         service.connected(new SessionConnectedEvent(this, MessageBuilder.createMessage(new byte[0], new MessageHeaders(Map.of()))));
         verifyNoInteractions(template);
     }

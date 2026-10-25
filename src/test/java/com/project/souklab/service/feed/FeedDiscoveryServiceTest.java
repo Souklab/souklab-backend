@@ -1,6 +1,6 @@
 package com.project.souklab.service.feed;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.SearchProperties;
 import com.project.souklab.dao.FeedPostBookmarkRepository;
 import com.project.souklab.dao.FeedPostLikeRepository;
 import com.project.souklab.dao.FeedPostRepository;
@@ -54,7 +54,7 @@ class FeedDiscoveryServiceTest {
     @Mock
     private FeedPostBookmarkRepository bookmarkRepository;
     @Mock
-    private AppProperties appProperties;
+    private SearchProperties searchProperties;
     @Mock
     private EntityManager entityManager;
     @Mock

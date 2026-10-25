@@ -13,8 +13,8 @@ import org.springframework.stereotype.Component;
 public class ChargilyHealthIndicator implements HealthIndicator {
     private final ChargilyProperties properties;
 
-    public ChargilyHealthIndicator(AppProperties appProperties) {
-        this.properties = appProperties.getChargily();
+    public ChargilyHealthIndicator(ChargilyProperties properties) {
+        this.properties = properties;
     }
 
     @Override

@@ -6,8 +6,8 @@ import os
 import re
 import sys
 
-properties_path = "src/main/resources/application.properties"
-prod_properties_path = "src/main/resources/application-prod.properties"
+properties_path = "src/main/resources/application.yml"
+prod_properties_path = "src/main/resources/application-prod.yml"
 
 env_targets = [
     ".env.example",

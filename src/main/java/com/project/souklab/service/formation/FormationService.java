@@ -8,7 +8,8 @@ import com.project.souklab.analytics.AnalyticsEvent;
 import com.project.souklab.analytics.AnalyticsMetadata;
 
 import com.project.souklab.analytics.ActivityEventService;
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.AppStorageProperties;
+import com.project.souklab.config.FormationProperties;
 import com.project.souklab.dao.ArtisanRepository;
 import com.project.souklab.dao.FormationEnrollmentRepository;
 import com.project.souklab.dao.FormationFileRepository;
@@ -79,7 +80,8 @@ public class FormationService {
     private final FileUrlResolver fileUrlResolver;
     private final FileValidator fileValidator;
     private final VirusScanService virusScanService;
-    private final AppProperties appProperties;
+    private final FormationProperties formationProperties;
+    private final AppStorageProperties appStorageProperties;
     private final NotificationService notificationService;
     private final Clock clock;
     private ActivityEventService activityEventService;
@@ -113,7 +115,7 @@ public class FormationService {
                 .price(dto.getPrice())
                 .currency(dto.getCurrency() != null && !dto.getCurrency().isBlank()
                         ? dto.getCurrency().trim()
-                        : appProperties.getFormation().getDefaultCurrency())
+                        : formationProperties.getDefaultCurrency())
                 .status(FormationStatus.DRAFT)
                 .build();
 
@@ -178,12 +180,12 @@ public class FormationService {
             throw new BadRequestException("Thumbnail file is required.");
         }
 
-        long maxBytes = appProperties.getFormation().getThumbnail().getMaxFileSize().toBytes();
+        long maxBytes = formationProperties.getThumbnail().getMaxFileSize().toBytes();
         if (file.getSize() > maxBytes) {
             throw new FileTooLargeException(file.getSize(), maxBytes);
         }
 
-        ValidatedFile validatedFile = validateAndSanitize(file, appProperties.getFormation().getThumbnail().getAllowedMimeTypes());
+        ValidatedFile validatedFile = validateAndSanitize(file, formationProperties.getThumbnail().getAllowedMimeTypes());
         ValidatedFile scannedFile = virusScanService.scan(validatedFile);
 
         String storageKey = null;
@@ -195,7 +197,7 @@ public class FormationService {
                     scannedFile.size()
             );
             storageKey = result.key();
-            formation.setThumbnailUrl(appProperties.getStorage().toUrl(storageKey));
+            formation.setThumbnailUrl(appStorageProperties.toUrl(storageKey));
             Formation saved = formationRepository.save(formation);
             return mapToResponseDTO(saved);
         } catch (Exception ex) {
@@ -220,18 +222,18 @@ public class FormationService {
             throw new BadRequestException("Course file is required.");
         }
 
-        int maxCount = appProperties.getFormation().getFile().getMaxCount();
+        int maxCount = formationProperties.getFile().getMaxCount();
         long currentCount = formationFileRepository.findByFormationIdAndDeletedAtIsNull(formation.getId()).size();
         if (currentCount >= maxCount) {
             throw new BadRequestException("Course file quota reached. Maximum " + maxCount + " files allowed.");
         }
 
-        long maxBytes = appProperties.getFormation().getFile().getMaxFileSize().toBytes();
+        long maxBytes = formationProperties.getFile().getMaxFileSize().toBytes();
         if (file.getSize() > maxBytes) {
             throw new FileTooLargeException(file.getSize(), maxBytes);
         }
 
-        ValidatedFile validatedFile = validateAndSanitize(file, appProperties.getFormation().getFile().getAllowedMimeTypes());
+        ValidatedFile validatedFile = validateAndSanitize(file, formationProperties.getFile().getAllowedMimeTypes());
         ValidatedFile scannedFile = virusScanService.scan(validatedFile);
 
         String storageKey = null;
@@ -253,7 +255,7 @@ public class FormationService {
                     .build();
 
             FormationFile savedFile = formationFileRepository.save(courseFile);
-            return FormationFileResponseDTO.from(savedFile, appProperties.getStorage().resolveFileServingPrefix());
+            return FormationFileResponseDTO.from(savedFile, appStorageProperties.resolveFileServingPrefix());
         } catch (Exception ex) {
             compensateStorageDelete(storageKey);
             throw ex;
@@ -554,7 +556,7 @@ public class FormationService {
         List<FormationFile> activeFiles = formationFileRepository.findByFormationIdAndDeletedAtIsNull(formation.getId());
         List<FormationReview> reviews = formationReviewRepository.findByFormationIdOrderByReviewedAtDesc(formation.getId());
         long activeEnrollments = formationEnrollmentRepository.countByFormationIdAndStatus(formation.getId(), EnrollmentStatus.CONFIRMED);
-        return FormationResponseDTO.from(formation, activeFiles, reviews, activeEnrollments, appProperties.getStorage().resolveFileServingPrefix());
+        return FormationResponseDTO.from(formation, activeFiles, reviews, activeEnrollments, appStorageProperties.resolveFileServingPrefix());
     }
 
     /**

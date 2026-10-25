@@ -15,7 +15,7 @@ import com.project.souklab.dao.UserRepository;
 import com.project.souklab.dao.FeedTagRepository;
 import com.project.souklab.dao.FeedPostBookmarkRepository;
 import com.project.souklab.dao.FeedPostLikeRepository;
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.FeedProperties;
 import com.project.souklab.dto.feed.FeedPostCreateDTO;
 import com.project.souklab.dto.feed.FeedPostMediaResponseDTO;
 import com.project.souklab.dto.feed.FeedPostModerationDTO;
@@ -87,7 +87,7 @@ public class FeedPostService {
     private final StorageObjectLifecycle storageObjectLifecycle;
     private final AccessControlService accessControlService;
     private final Clock clock;
-    private final AppProperties appProperties;
+    private final FeedProperties feedProperties;
     private final FeedPrivacyService feedPrivacyService;
     private ActivityEventService activityEventService;
 
@@ -266,7 +266,7 @@ public class FeedPostService {
     public FeedPostMediaResponseDTO addMedia(String id, MultipartFile file) {
         FeedPost post = findPost(id);
         requireAuthorOrAdmin(post);
-        int maxMediaPerPost = appProperties.getFeed().getMaxMediaPerPost();
+        int maxMediaPerPost = feedProperties.getMaxMediaPerPost();
         if (post.getMedia().size() >= maxMediaPerPost) {
             throw new BadRequestException("A feed post may contain at most " + maxMediaPerPost + " images.");
         }
@@ -277,7 +277,7 @@ public class FeedPostService {
         try {
             ValidatedFile validated = fileValidator.validateAndSanitize(
                     file.getInputStream(), file.getOriginalFilename(), file.getContentType(), file.getSize(),
-                    appProperties.getFeed().getAllowedImageMimeTypes());
+                    feedProperties.getAllowedImageMimeTypes());
             ValidatedFile scanned = virusScanService.scan(validated);
             StorageResult stored = storageService.store(scanned.content(), scanned.sanitizedFilename(), scanned.detectedMimeType(), scanned.size());
             storedKey = stored.key();
@@ -506,7 +506,7 @@ public class FeedPostService {
         if (values == null || values.isEmpty()) {
             return new ArrayList<>();
         }
-        int maxTags = appProperties.getFeed().getMaxTagsPerPost();
+        int maxTags = feedProperties.getMaxTagsPerPost();
         if (values.size() > maxTags) {
             throw new BadRequestException("A feed post contains too many tags.");
         }
@@ -515,7 +515,7 @@ public class FeedPostService {
                 .map(String::trim)
                 .collect(Collectors.toMap(value -> value.toLowerCase(Locale.ROOT), value -> value,
                         (first, ignored) -> first, LinkedHashMap::new));
-        if (normalized.values().stream().anyMatch(value -> value.length() > appProperties.getFeed().getMaxTagLength())) {
+        if (normalized.values().stream().anyMatch(value -> value.length() > feedProperties.getMaxTagLength())) {
             throw new BadRequestException("A feed tag is too long.");
         }
         List<FeedTag> existing = tagRepository.findBySlugIn(normalized.keySet());
@@ -526,8 +526,8 @@ public class FeedPostService {
     }
 
     private void validateTextLengths(FeedPostCreateDTO request) {
-        int maxTitle = appProperties.getFeed().getMaxTitleLength();
-        int maxBody = appProperties.getFeed().getMaxBodyLength();
+        int maxTitle = feedProperties.getMaxTitleLength();
+        int maxBody = feedProperties.getMaxBodyLength();
         if (maxTitle > 0 && request.getTitle().trim().length() > maxTitle) {
             throw new BadRequestException("Feed post title exceeds the configured maximum length.");
         }

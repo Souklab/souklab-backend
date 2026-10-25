@@ -3,7 +3,9 @@ package com.project.souklab.service.auth;
 import java.util.Collection;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.AuthProperties;
+import com.project.souklab.config.JwtProperties;
+import com.project.souklab.config.SupportProperties;
 import com.project.souklab.dao.ClientRepository;
 import com.project.souklab.dao.OAuthIdentityRepository;
 import com.project.souklab.dao.RefreshTokenRepository;
@@ -134,7 +136,9 @@ class AuthServiceTest {
 
     private final ProfileResponseMapper profileResponseMapper = new ProfileResponseMapper();
 
-    private AppProperties appProperties;
+    private JwtProperties jwtProperties;
+    private AuthProperties authProperties;
+    private SupportProperties supportProperties;
     private Clock fixedClock;
     private LocalDateTime fixedNow;
     private AuthService authService;
@@ -149,11 +153,15 @@ class AuthServiceTest {
         fixedClock = Clock.fixed(Instant.parse("2026-09-04T12:00:00Z"), ZoneId.of("UTC"));
         fixedNow = LocalDateTime.now(fixedClock);
 
-        appProperties = new AppProperties();
-        appProperties.getJwt().setAccessTokenExpirationMs(900000L);
-        appProperties.getJwt().setRefreshTokenExpirationMs(604800000L);
-        appProperties.getAuth().getLockout().setMaxAttempts(5);
-        appProperties.getAuth().getLockout().setDurationMinutes(15);
+        jwtProperties = new JwtProperties();
+        jwtProperties.setAccessTokenExpirationMs(900000L);
+        jwtProperties.setRefreshTokenExpirationMs(604800000L);
+
+        authProperties = new AuthProperties();
+        authProperties.getLockout().setMaxAttempts(5);
+        authProperties.getLockout().setDurationMinutes(15);
+
+        supportProperties = new SupportProperties();
 
         artisanRole = new AuthorizationPermission();
         artisanRole.setPermissionKey(Permission.Artisan.CONTENT.value());
@@ -184,7 +192,9 @@ class AuthServiceTest {
                 notificationService,
                 jwtUtils,
                 refreshTokenService,
-                appProperties,
+                jwtProperties,
+                authProperties,
+                supportProperties,
                 verificationTokenService,
                 emailUtil,
                 auditLogService,
@@ -734,13 +744,13 @@ class AuthServiceTest {
     }
 
     /**
-     * Verifies login locks account using custom configured max attempts and lockout duration from AppProperties.
+     * Verifies login locks account using custom configured max attempts and lockout duration from AuthProperties.
      */
     @Test
     @DisplayName("login: locks account using custom configured max attempts and lockout duration")
     void login_whenCustomLockoutConfigured_locksAccountWithCustomAttemptsAndDuration() {
-        appProperties.getAuth().getLockout().setMaxAttempts(3);
-        appProperties.getAuth().getLockout().setDurationMinutes(30);
+        authProperties.getLockout().setMaxAttempts(3);
+        authProperties.getLockout().setDurationMinutes(30);
 
         LoginDTO dto = LoginDTO.builder()
                 .email("user@example.com")

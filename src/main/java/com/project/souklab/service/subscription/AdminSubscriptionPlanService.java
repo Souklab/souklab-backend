@@ -1,7 +1,7 @@
 package com.project.souklab.service.subscription;
 
 import com.project.souklab.dao.SubscriptionPlanRepository;
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.SubscriptionProperties;
 import com.project.souklab.dto.subscription.SubscriptionPlanRequest;
 import com.project.souklab.dto.subscription.SubscriptionPlanResponse;
 import com.project.souklab.model.SubscriptionPlan;
@@ -24,7 +24,7 @@ import java.util.List;
 public class AdminSubscriptionPlanService {
     private final SubscriptionPlanRepository planRepository;
     private final SubscriptionPlanRules rules;
-    private final AppProperties appProperties;
+    private final SubscriptionProperties subscriptionProperties;
     private final CurrentUserProvider currentUserProvider;
     private final AuditLogService auditLogService;
 
@@ -71,13 +71,13 @@ public class AdminSubscriptionPlanService {
 
     private void apply(SubscriptionPlan plan, SubscriptionPlanRequest request) {
         rules.validateDzdAmount(request.getAmount());
-        rules.validateCurrency(appProperties.getSubscription().getCurrency());
+        rules.validateCurrency(subscriptionProperties.getCurrency());
         plan.setSubscriberType(request.getSubscriberType());
         plan.setName(request.getName().trim());
         plan.setDescription(request.getDescription());
         plan.setBillingPeriod(request.getBillingPeriod());
         plan.setAmount(request.getAmount());
-        plan.setCurrency(appProperties.getSubscription().getCurrency());
+        plan.setCurrency(subscriptionProperties.getCurrency());
         plan.setActive(request.isActive());
         plan.clearEntitlements();
         if (request.getEntitlements() != null) {

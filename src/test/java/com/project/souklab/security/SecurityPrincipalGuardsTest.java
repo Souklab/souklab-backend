@@ -4,7 +4,7 @@ import jakarta.servlet.http.Cookie;
 import java.lang.Long;
 import java.lang.String;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.JwtProperties;
 import java.time.Clock;
 import com.project.souklab.service.auth.AuthService;
 import com.project.souklab.util.ServletResponseUtil;
@@ -43,12 +43,12 @@ class SecurityPrincipalGuardsTest {
 
     @BeforeEach
     void setUp() {
-        AppProperties appProperties = new AppProperties();
-        appProperties.getJwt().setSecret("secretKeyForTestingGuardsOnlyMin32BytesLength123");
-        appProperties.getJwt().setAccessTokenExpirationMs(3600000L);
-        appProperties.getJwt().setRefreshTokenExpirationMs(86400000L);
+        JwtProperties jwtProperties = new JwtProperties();
+        jwtProperties.setSecret("secretKeyForTestingGuardsOnlyMin32BytesLength123");
+        jwtProperties.setAccessTokenExpirationMs(3600000L);
+        jwtProperties.setRefreshTokenExpirationMs(86400000L);
 
-        jwtUtils = new JwtUtils(appProperties, Clock.systemUTC());
+        jwtUtils = new JwtUtils(jwtProperties, Clock.systemUTC());
 
         AuthService authService = Mockito.mock(AuthService.class);
         ServletResponseUtil servletResponseUtil = Mockito.mock(ServletResponseUtil.class);

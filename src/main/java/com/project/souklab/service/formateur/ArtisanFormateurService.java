@@ -1,6 +1,6 @@
 package com.project.souklab.service.formateur;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.ArtisanProperties;
 import com.project.souklab.dao.ArtisanFormateurRequestRepository;
 import com.project.souklab.dao.ArtisanRepository;
 import com.project.souklab.dao.UserRepository;
@@ -53,7 +53,7 @@ public class ArtisanFormateurService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final EmailUtil emailUtil;
-    private final AppProperties appProperties;
+    private final ArtisanProperties artisanProperties;
     private final Clock clock;
 
     /**
@@ -228,7 +228,7 @@ public class ArtisanFormateurService {
         boolean canReapply = dto.getCanReapply() == null || Boolean.TRUE.equals(dto.getCanReapply());
         LocalDateTime cooldownUntil = null;
         if (canReapply) {
-            long cooldownDays = appProperties.getArtisan().getFormateur().getReapplyCooldownDays();
+            long cooldownDays = artisanProperties.getFormateur().getReapplyCooldownDays();
             cooldownUntil = dto.getCooldownUntil() != null ? dto.getCooldownUntil() : LocalDateTime.now(clock).plusDays(cooldownDays);
         }
 

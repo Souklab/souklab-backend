@@ -6,7 +6,7 @@ import com.project.souklab.dao.FeedPostCommentRepository;
 import com.project.souklab.dao.FeedPostLikeRepository;
 import com.project.souklab.dao.FeedPostRepository;
 import com.project.souklab.dao.UserRepository;
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.FeedProperties;
 import com.project.souklab.dto.common.PaginatedResponse;
 import com.project.souklab.dto.feed.FeedPostCommentCreateDTO;
 import com.project.souklab.dto.feed.FeedPostCommentResponseDTO;
@@ -55,7 +55,7 @@ public class FeedEngagementService {
     private final FeedPostCommentLikeRepository commentLikeRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
-    private final AppProperties appProperties;
+    private final FeedProperties feedProperties;
     private final AccessControlService accessControlService;
     private final FeedPrivacyService feedPrivacyService;
     private final ViewerPremiumResolver viewerPremiumResolver;
@@ -67,7 +67,7 @@ public class FeedEngagementService {
                                  FeedPostBookmarkRepository bookmarkRepository,
                                  FeedPostCommentRepository commentRepository,
                                  FeedPostCommentLikeRepository commentLikeRepository, UserRepository userRepository,
-                                 NotificationService notificationService, AppProperties appProperties,
+                                 NotificationService notificationService, FeedProperties feedProperties,
                                  AccessControlService accessControlService, FeedPrivacyService feedPrivacyService,
                                  ViewerPremiumResolver viewerPremiumResolver, Clock clock) {
         this.postRepository = postRepository;
@@ -77,7 +77,7 @@ public class FeedEngagementService {
         this.commentLikeRepository = commentLikeRepository;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
-        this.appProperties = appProperties;
+        this.feedProperties = feedProperties;
         this.accessControlService = accessControlService;
         this.feedPrivacyService = feedPrivacyService;
         this.viewerPremiumResolver = viewerPremiumResolver;
@@ -89,11 +89,11 @@ public class FeedEngagementService {
                                  FeedPostBookmarkRepository bookmarkRepository,
                                  FeedPostCommentRepository commentRepository,
                                  FeedPostCommentLikeRepository commentLikeRepository, UserRepository userRepository,
-                                 NotificationService notificationService, AppProperties appProperties,
+                                 NotificationService notificationService, FeedProperties feedProperties,
                                  AccessControlService accessControlService, FeedPrivacyService feedPrivacyService,
                                  Clock clock) {
         this(postRepository, postLikeRepository, bookmarkRepository, commentRepository, commentLikeRepository,
-                userRepository, notificationService, appProperties, accessControlService, feedPrivacyService,
+                userRepository, notificationService, feedProperties, accessControlService, feedPrivacyService,
                 null, clock);
     }
 
@@ -370,7 +370,7 @@ public class FeedEngagementService {
     }
 
     private String validateContent(String content) {
-        int maxLength = appProperties.getFeed().getMaxCommentLength();
+        int maxLength = feedProperties.getMaxCommentLength();
         if (content == null || content.isBlank() || (maxLength > 0 && content.trim().length() > maxLength)) {
             throw new BadRequestException("Comment exceeds the configured maximum length.");
         }

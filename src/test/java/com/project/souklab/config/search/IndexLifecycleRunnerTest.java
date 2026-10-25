@@ -1,6 +1,6 @@
 package com.project.souklab.config.search;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.SearchProperties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -20,7 +20,7 @@ import static org.mockito.Mockito.when;
 class IndexLifecycleRunnerTest {
 
     @Mock
-    private AppProperties appProperties;
+    private SearchProperties searchProperties;
 
     @Mock
     private SearchIndexingService searchIndexingService;
@@ -30,9 +30,7 @@ class IndexLifecycleRunnerTest {
 
     @Test
     void doesNothingWhenStartupSynchronizationIsDisabled() {
-        AppProperties.Search search = new AppProperties.Search();
-        search.setSyncOnStartup(false);
-        when(appProperties.getSearch()).thenReturn(search);
+        when(searchProperties.isSyncOnStartup()).thenReturn(false);
 
         assertThatCode(() -> runner.run(new DefaultApplicationArguments(new String[0]))).doesNotThrowAnyException();
         verifyNoInteractions(searchIndexingService);
@@ -40,8 +38,13 @@ class IndexLifecycleRunnerTest {
 
     @Test
     void configuresAndStartsMassIndexer() {
-        AppProperties.Search search = searchProperties();
-        when(appProperties.getSearch()).thenReturn(search);
+        SearchProperties.MassIndexing massIndexing = new SearchProperties.MassIndexing();
+        massIndexing.setThreadsToLoadObjects(2);
+        massIndexing.setBatchSizeToLoadObjects(25);
+        massIndexing.setIdFetchSize(50);
+
+        when(searchProperties.isSyncOnStartup()).thenReturn(true);
+        when(searchProperties.getMassIndexing()).thenReturn(massIndexing);
         when(searchIndexingService.start(any())).thenReturn(CompletableFuture.completedFuture(null));
 
         assertThatCode(() -> runner.run(new DefaultApplicationArguments(new String[0]))).doesNotThrowAnyException();
@@ -50,8 +53,13 @@ class IndexLifecycleRunnerTest {
 
     @Test
     void absorbsAsynchronousMassIndexFailure() {
-        AppProperties.Search search = searchProperties();
-        when(appProperties.getSearch()).thenReturn(search);
+        SearchProperties.MassIndexing massIndexing = new SearchProperties.MassIndexing();
+        massIndexing.setThreadsToLoadObjects(2);
+        massIndexing.setBatchSizeToLoadObjects(25);
+        massIndexing.setIdFetchSize(50);
+
+        when(searchProperties.isSyncOnStartup()).thenReturn(true);
+        when(searchProperties.getMassIndexing()).thenReturn(massIndexing);
         when(searchIndexingService.start(any())).thenReturn(CompletableFuture.failedFuture(new IllegalStateException("backend unavailable")));
 
         assertThatCode(() -> runner.run(new DefaultApplicationArguments(new String[0]))).doesNotThrowAnyException();
@@ -59,19 +67,14 @@ class IndexLifecycleRunnerTest {
 
     @Test
     void absorbsImmediateSearchSetupFailure() {
-        AppProperties.Search search = searchProperties();
-        when(appProperties.getSearch()).thenReturn(search);
+        SearchProperties.MassIndexing massIndexing = new SearchProperties.MassIndexing();
+        massIndexing.setThreadsToLoadObjects(2);
+        massIndexing.setBatchSizeToLoadObjects(25);
+        massIndexing.setIdFetchSize(50);
 
+        when(searchProperties.isSyncOnStartup()).thenReturn(true);
+        when(searchProperties.getMassIndexing()).thenReturn(massIndexing);
         when(searchIndexingService.start(any())).thenThrow(new IllegalStateException("not available"));
         assertThatCode(() -> runner.run(new DefaultApplicationArguments(new String[0]))).doesNotThrowAnyException();
-    }
-
-    private AppProperties.Search searchProperties() {
-        AppProperties.Search search = new AppProperties.Search();
-        search.setSyncOnStartup(true);
-        search.getMassIndexing().setThreadsToLoadObjects(2);
-        search.getMassIndexing().setBatchSizeToLoadObjects(25);
-        search.getMassIndexing().setIdFetchSize(50);
-        return search;
     }
 }

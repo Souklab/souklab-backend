@@ -1,6 +1,6 @@
 package com.project.souklab.service.feed;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.SearchProperties;
 import com.project.souklab.dao.FeedPostRepository;
 import com.project.souklab.dao.FeedPostBookmarkRepository;
 import com.project.souklab.dao.FeedPostLikeRepository;
@@ -36,7 +36,7 @@ public class FeedDiscoveryService {
     private final UserRepository userRepository;
     private final FeedPostLikeRepository postLikeRepository;
     private final FeedPostBookmarkRepository bookmarkRepository;
-    private final AppProperties appProperties;
+    private final SearchProperties searchProperties;
     private final EntityManager entityManager;
     private final FeedPrivacyService feedPrivacyService;
     private final FileUrlResolver fileUrlResolver;
@@ -128,7 +128,7 @@ public class FeedDiscoveryService {
 
     private boolean searchEnabled(String query, FeedPostType type, String authorId, String tag) {
         return query != null && !query.isBlank() && type == null && authorId == null && tag == null
-                && appProperties.getSearch().isEnabled();
+                && searchProperties.isEnabled();
     }
 
     private Page<FeedPost> search(String query, Pageable pageable) {

@@ -1,7 +1,7 @@
 package com.project.souklab.service.favorite;
 
 import com.project.souklab.util.LogSanitizer;
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.FavoritesProperties;
 import com.project.souklab.dao.ArtisanRepository;
 import com.project.souklab.dao.ClientFavoriteArtisanRepository;
 import com.project.souklab.dao.ClientRepository;
@@ -53,7 +53,7 @@ public class ArtisanFavoriteServiceImpl implements ArtisanFavoriteService {
     private final ClientRepository clientRepository;
     private final ArtisanRepository artisanRepository;
     private final ClientFavoriteArtisanRepository favoriteRepository;
-    private final AppProperties appProperties;
+    private final FavoritesProperties favoritesProperties;
     private final Clock clock;
     private final ViewerPremiumResolver viewerPremiumResolver;
 
@@ -100,7 +100,7 @@ public class ArtisanFavoriteServiceImpl implements ArtisanFavoriteService {
         if (existingFavorites.stream().anyMatch(fav -> fav.getArtisan().getId().equals(artisan.getId()))) {
             throw new ConflictException(ERROR_ALREADY_FAVORITED);
         }
-        if (existingFavorites.size() >= appProperties.getFavorites().getMaxPerClient()) {
+        if (existingFavorites.size() >= favoritesProperties.getMaxPerClient()) {
             throw new ConflictException(ApiErrorCode.FAVORITES_LIMIT_REACHED, ERROR_CAP_REACHED);
         }
 

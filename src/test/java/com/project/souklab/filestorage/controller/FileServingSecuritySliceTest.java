@@ -1,7 +1,9 @@
 package com.project.souklab.filestorage.controller;
 
-import com.project.souklab.config.AppProperties;
 import com.project.souklab.config.AvatarProperties;
+import com.project.souklab.config.ChargilyProperties;
+import com.project.souklab.config.CorsProperties;
+import com.project.souklab.config.RateLimitProperties;
 import com.project.souklab.config.SecurityConfig;
 import com.project.souklab.filestorage.StorageService;
 import com.project.souklab.service.storage.FileAccessService;
@@ -58,12 +60,22 @@ class FileServingSecuritySliceTest {
     @Configuration
     static class TestFilterConfig {
         @Bean
-        public AppProperties appProperties() {
-            AppProperties appProperties = new AppProperties();
-            appProperties.getRateLimit().setEnabled(false);
-            appProperties.getRateLimit().setCapacity(100);
-            appProperties.getRateLimit().setRefillDuration(Duration.ofMinutes(1));
-            return appProperties;
+        public RateLimitProperties rateLimitProperties() {
+            RateLimitProperties rateLimitProperties = new RateLimitProperties();
+            rateLimitProperties.setEnabled(false);
+            rateLimitProperties.setCapacity(100);
+            rateLimitProperties.setRefillDuration(Duration.ofMinutes(1));
+            return rateLimitProperties;
+        }
+
+        @Bean
+        public CorsProperties corsProperties() {
+            return new CorsProperties();
+        }
+
+        @Bean
+        public ChargilyProperties chargilyProperties() {
+            return new ChargilyProperties();
         }
 
         @Bean
@@ -87,8 +99,8 @@ class FileServingSecuritySliceTest {
         }
 
         @Bean
-        public RateLimitFilter rateLimitFilter(ServletResponseUtil servletResponseUtil, AppProperties appProperties) {
-            return new RateLimitFilter(servletResponseUtil, appProperties);
+        public RateLimitFilter rateLimitFilter(ServletResponseUtil servletResponseUtil, RateLimitProperties rateLimitProperties) {
+            return new RateLimitFilter(servletResponseUtil, rateLimitProperties);
         }
 
         @Bean

@@ -34,7 +34,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.AdminProperties;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -53,7 +53,7 @@ public class UserManagementService {
     private final RefreshTokenService refreshTokenService;
     private final NotificationService notificationService;
     private final Clock clock;
-    private final AppProperties appProperties;
+    private final AdminProperties adminProperties;
     private ActivityEventService activityEventService;
     private DomainEventPublisher eventPublisher;
 
@@ -165,7 +165,7 @@ public class UserManagementService {
         validateNotSelfTargeting(user);
 
         user.setStatus(AccountStatus.SUSPENDED);
-        user.setBanReason(reason != null ? reason : appProperties.getAdmin().getDefaultBanReason());
+        user.setBanReason(reason != null ? reason : adminProperties.getDefaultBanReason());
         user.setBannedUntil(null);
 
         userRepository.save(user);
@@ -202,7 +202,7 @@ public class UserManagementService {
         validateNotSelfTargeting(user);
 
         user.setStatus(AccountStatus.SUSPENDED);
-        user.setBanReason(reason != null ? reason : appProperties.getAdmin().getDefaultTimeoutReason());
+        user.setBanReason(reason != null ? reason : adminProperties.getDefaultTimeoutReason());
         user.setBannedUntil(LocalDateTime.now(clock).plusMinutes(minutes));
         userRepository.save(user);
 

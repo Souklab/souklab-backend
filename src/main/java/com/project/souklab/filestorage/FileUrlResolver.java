@@ -1,6 +1,6 @@
 package com.project.souklab.filestorage;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.AppStorageProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class FileUrlResolver {
 
-    private final AppProperties appProperties;
+    private final AppStorageProperties appStorageProperties;
 
     /**
      * Resolves an internal storage key to its public URL representation.
@@ -21,7 +21,7 @@ public class FileUrlResolver {
      * @return the fully qualified or relative public file serving URL, or null if key is null or blank
      */
     public String toUrl(String storageKey) {
-        return appProperties.getStorage().toUrl(storageKey);
+        return appStorageProperties.toUrl(storageKey);
     }
 
     /**
@@ -30,7 +30,7 @@ public class FileUrlResolver {
      * @return normalized file serving prefix ending with '/'
      */
     public String getPrefix() {
-        return appProperties.getStorage().resolveFileServingPrefix();
+        return appStorageProperties.resolveFileServingPrefix();
     }
 
     /**

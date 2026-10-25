@@ -12,8 +12,8 @@ import com.project.souklab.dto.formation.FormationReviewRequestDTO;
 import com.project.souklab.dto.formation.FormationSummaryDTO;
 import com.project.souklab.exception.BadRequestException;
 import com.project.souklab.exception.ConflictException;
+import com.project.souklab.config.AppStorageProperties;
 import com.project.souklab.model.Artisan;
-import com.project.souklab.config.AppProperties;
 import com.project.souklab.model.EnrollmentStatus;
 import com.project.souklab.model.Formation;
 import com.project.souklab.model.FormationReview;
@@ -90,7 +90,7 @@ class AdminFormationServiceTest {
     private AccessControlService accessControlService;
 
     @Spy
-    private AppProperties appProperties = new AppProperties();
+    private AppStorageProperties appStorageProperties = new AppStorageProperties();
 
     @Spy
     private Clock clock = Clock.systemUTC();
@@ -105,7 +105,7 @@ class AdminFormationServiceTest {
 
     @BeforeEach
     void setUp() {
-        appProperties.getStorage().setFileServingPrefix("/api/v1/files/");
+        appStorageProperties.setFileServingPrefix("/api/v1/files/");
         lenient().when(accessControlService.canManageFormations(any())).thenReturn(true);
         adminUser = User.builder()
                 .email(ADMIN_EMAIL)

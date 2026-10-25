@@ -1,6 +1,6 @@
 package com.project.souklab.service.user;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.AdminProperties;
 import com.project.souklab.dao.ArtisanRepository;
 import com.project.souklab.dao.UserRepository;
 import com.project.souklab.dto.auth.UserResponseDTO;
@@ -80,9 +80,9 @@ class UserManagementServiceTest {
     @BeforeEach
     void setUp() {
         clock = Clock.fixed(FIXED_INSTANT, ZONE);
-        AppProperties properties = new AppProperties();
-        properties.getAdmin().setDefaultBanReason("Account banned by administrator");
-        properties.getAdmin().setDefaultTimeoutReason("Account timed out by administrator");
+        AdminProperties properties = new AdminProperties();
+        properties.setDefaultBanReason("Account banned by administrator");
+        properties.setDefaultTimeoutReason("Account timed out by administrator");
         userManagementService = new UserManagementService(
                 userRepository,
                 artisanRepository,

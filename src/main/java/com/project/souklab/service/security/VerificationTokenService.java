@@ -1,6 +1,6 @@
 package com.project.souklab.service.security;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.AuthProperties;
 import com.project.souklab.dao.VerificationTokenRepository;
 import com.project.souklab.exception.BadRequestException;
 import com.project.souklab.model.User;
@@ -29,7 +29,7 @@ public class VerificationTokenService {
     private static final String HASH_ALGORITHM = "SHA-256";
 
     private final VerificationTokenRepository verificationTokenRepository;
-    private final AppProperties appProperties;
+    private final AuthProperties authProperties;
     private final Clock clock;
 
     /**
@@ -47,8 +47,8 @@ public class VerificationTokenService {
 
         verificationTokenRepository.invalidateActiveTokens(user, type, now);
 
-        int codeLength = appProperties.getAuth().getVerification().getCodeLength();
-        int expirationMinutes = appProperties.getAuth().getVerification().getExpirationMinutes();
+        int codeLength = authProperties.getVerification().getCodeLength();
+        int expirationMinutes = authProperties.getVerification().getExpirationMinutes();
 
         String rawCode = CodeGeneratorUtil.generateNumericCode(codeLength);
         String codeHash = hashToken(rawCode);
@@ -87,7 +87,7 @@ public class VerificationTokenService {
                     return new BadRequestException(ERROR_INVALID_OR_EXPIRED_CODE);
                 });
 
-        int maxAttempts = appProperties.getAuth().getVerification().getMaxAttempts();
+        int maxAttempts = authProperties.getVerification().getMaxAttempts();
 
         if (token.getAttempts() >= maxAttempts) {
             LOGGER.warn("Verification failed: token for user {} and type {} is locked (attempts: {})", user.getId(), type, token.getAttempts());

@@ -1,7 +1,7 @@
 package com.project.souklab.security;
 
-import com.project.souklab.config.AppProperties;
 import com.project.souklab.config.RateLimitEndpointProperties;
+import com.project.souklab.config.RateLimitProperties;
 import com.project.souklab.util.ServletResponseUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,29 +15,29 @@ import java.time.Duration;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class RateLimitFilterTest {
-    private AppProperties properties;
+    private RateLimitProperties properties;
     private RateLimitFilter filter;
 
     @BeforeEach
     void setUp() {
-        properties = new AppProperties();
-        properties.getRateLimit().setEnabled(true);
-        properties.getRateLimit().setCapacity(2);
-        properties.getRateLimit().setRefillDuration(Duration.ofMinutes(1));
+        properties = new RateLimitProperties();
+        properties.setEnabled(true);
+        properties.setCapacity(2);
+        properties.setRefillDuration(Duration.ofMinutes(1));
         filter = new RateLimitFilter(new ServletResponseUtil(new JsonMapper()), properties);
     }
 
     @Test
     void disabledConfigurationSkipsFiltering() {
-        properties.getRateLimit().setEnabled(false);
+        properties.setEnabled(false);
         assertThat(filter.shouldNotFilter(new MockHttpServletRequest())).isTrue();
     }
 
     @Test
     void missingConfigurationSkipsBeforeDereferencingTheRateLimitPolicy() {
-        properties.setRateLimit(null);
+        RateLimitFilter nullFilter = new RateLimitFilter(new ServletResponseUtil(new JsonMapper()), null);
 
-        assertThat(filter.shouldNotFilter(new MockHttpServletRequest())).isTrue();
+        assertThat(nullFilter.shouldNotFilter(new MockHttpServletRequest())).isTrue();
     }
 
     @Test

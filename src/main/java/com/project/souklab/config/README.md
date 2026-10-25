@@ -10,7 +10,7 @@ Centralizes framework configurations, custom Spring Beans, security filter setup
 - Enforces the Principle of Least Privilege on public read paths (`/feed`, `/catalog/**`, `/public/**`, `/subscriptions/plans`, `/artisans/*/reviews`), restricting unauthenticated access strictly to `HttpMethod.GET`.
 - Sets up asynchronous task executors (`AsyncConfig`) and deterministic clocks (`ClockConfig`).
 - Configures Caffeine in-memory caches for reference taxonomy data; security rate limits use the shared Bucket4j backend in production.
-- Binds externalized configuration properties (`AppProperties`, `AvatarProperties`) and framework-level proxy header strategy (`server.forward-headers-strategy=framework`).
+- Binds externalized configuration properties (`*Properties`) and framework-level proxy header strategy (`server.forward-headers-strategy=framework`).
 - Configures WebSocket endpoints, STOMP message routing, and authentication handshakes (`WebSocketConfig`).
 - Seeds canonical permissions and reference data; administrator bootstrap is explicitly property-gated (`DataSeeder`).
 - Harmonizes outer HTTP status codes with inner envelope codes (`ApiResponseCodeAdvice`).
@@ -23,7 +23,6 @@ Centralizes framework configurations, custom Spring Beans, security filter setup
 | Class | Type | Responsibility |
 | :--- | :--- | :--- |
 | [`SecurityConfig`](SecurityConfig.java) | `@Configuration` | Configures `SecurityFilterChain`, CORS rules, hardened headers (CSP, Permissions-Policy), method-specific public endpoint permissions, and filter order. |
-| [`AppProperties`](AppProperties.java) | `@ConfigurationProperties(prefix = "app")` | Binds JWT secrets, storage, search, formation, support, and authentication configuration. |
 | [`AvatarProperties`](AvatarProperties.java) | `@ConfigurationProperties(prefix = "avatar")` | Configures avatar quotas, MIME policy, and upload rate limiting. |
 | [`CacheConfig`](CacheConfig.java) | `@Configuration`, `@EnableCaching` | Configures Caffeine cache manager and names for Wilayas, categories, materials, epoques, and techniques. |
 | [`AsyncConfig`](AsyncConfig.java) | `@Configuration`, `@EnableAsync` | Configures thread pools for non-blocking operations (audit logging, email dispatch). |

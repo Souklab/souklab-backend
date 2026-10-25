@@ -1,6 +1,7 @@
 package com.project.souklab.service.artisan;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.AppStorageProperties;
+import com.project.souklab.config.ArtisanProperties;
 import com.project.souklab.dao.ArtisanCertificationRepository;
 import com.project.souklab.dao.ArtisanRepository;
 import com.project.souklab.dto.artisan.CertificationResponseDTO;
@@ -48,7 +49,8 @@ public class ArtisanCertificationService {
     private final FileUrlResolver fileUrlResolver;
     private final FileValidator fileValidator;
     private final VirusScanService virusScanService;
-    private final AppProperties appProperties;
+    private final ArtisanProperties artisanProperties;
+    private final AppStorageProperties appStorageProperties;
     private final Clock clock;
 
 
@@ -79,7 +81,7 @@ public class ArtisanCertificationService {
         Artisan artisan = resolveAuthenticatedArtisan();
         artisan = artisanRepository.findWithLockById(artisan.getId()).orElse(artisan);
 
-        int maxCount = appProperties.getArtisan().getCertification().getMaxCount();
+        int maxCount = artisanProperties.getCertification().getMaxCount();
         long activeCount = certificationRepository.countByArtisanIdAndDeletedAtIsNull(artisan.getId());
         if (activeCount >= maxCount) {
             throw new BadRequestException("Certification quota exceeded. Maximum " + maxCount + " records allowed.");
@@ -145,12 +147,12 @@ public class ArtisanCertificationService {
                 throw new BadRequestException("Expiration date cannot be earlier than issuance date.");
             }
             if (file != null && !file.isEmpty()) {
-                long max = appProperties.getArtisan().getCertification().getMaxFileSize().toBytes();
+                long max = artisanProperties.getCertification().getMaxFileSize().toBytes();
                 if (file.getSize() > max) throw new FileTooLargeException(file.getSize(), max);
                 ValidatedFile validated = virusScanService.scan(validateAndSanitizeFile(file));
                 StorageResult stored = storageService.store(validated.content(), validated.sanitizedFilename(), validated.detectedMimeType(), validated.size());
                 newStorageKey = stored.key();
-                cert.setDocumentUrl(appProperties.getStorage().toUrl(newStorageKey));
+                cert.setDocumentUrl(appStorageProperties.toUrl(newStorageKey));
             }
             cert.setVerified(false);
             CertificationResponseDTO response = CertificationResponseDTO.from(certificationRepository.save(cert));
@@ -212,7 +214,7 @@ public class ArtisanCertificationService {
         if (issuedAt != null && expiresAt != null && expiresAt.isBefore(issuedAt)) {
             throw new BadRequestException("Expiration date cannot be earlier than issuance date.");
         }
-        long maxFileSizeBytes = appProperties.getArtisan().getCertification().getMaxFileSize().toBytes();
+        long maxFileSizeBytes = artisanProperties.getCertification().getMaxFileSize().toBytes();
         if (file.getSize() > maxFileSizeBytes) {
             throw new FileTooLargeException(file.getSize(), maxFileSizeBytes);
         }
@@ -231,7 +233,7 @@ public class ArtisanCertificationService {
                     file.getOriginalFilename(),
                     file.getContentType(),
                     file.getSize(),
-                    appProperties.getArtisan().getCertification().getAllowedMimeTypes()
+                    artisanProperties.getCertification().getAllowedMimeTypes()
             );
         } catch (IOException e) {
             log.error("Failed to read certification upload stream", e);
@@ -274,7 +276,7 @@ public class ArtisanCertificationService {
                     .issuer(issuer)
                     .issuedAt(issuedAt)
                     .expiresAt(expiresAt)
-                    .documentUrl(appProperties.getStorage().toUrl(storageKey))
+                    .documentUrl(appStorageProperties.toUrl(storageKey))
                     .isVerified(false)
                     .build();
 

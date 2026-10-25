@@ -1,6 +1,6 @@
 package com.project.souklab.service.security;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.AuthProperties;
 import com.project.souklab.dao.VerificationTokenRepository;
 import com.project.souklab.exception.BadRequestException;
 import com.project.souklab.model.User;
@@ -54,10 +54,10 @@ class VerificationTokenServiceTest {
     void setUp() {
         fixedClock = Clock.fixed(FIXED_INSTANT, ZONE_ID);
         fixedNow = LocalDateTime.now(fixedClock);
-        AppProperties properties = new AppProperties();
-        properties.getAuth().getVerification().setMaxAttempts(5);
-        properties.getAuth().getVerification().setExpirationMinutes(CODE_EXPIRATION_MINUTES);
-        properties.getAuth().getVerification().setCodeLength(6);
+        AuthProperties properties = new AuthProperties();
+        properties.getVerification().setMaxAttempts(5);
+        properties.getVerification().setExpirationMinutes(CODE_EXPIRATION_MINUTES);
+        properties.getVerification().setCodeLength(6);
         verificationTokenService = new VerificationTokenService(verificationTokenRepository, properties, fixedClock);
 
         testUser = User.builder()

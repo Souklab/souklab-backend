@@ -2,7 +2,7 @@ package com.project.souklab.service.chat;
 
 import org.springframework.messaging.Message;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.ChatProperties;
 import com.project.souklab.dao.ConversationParticipantRepository;
 import com.project.souklab.dto.chat.ChatEvent;
 import com.project.souklab.dto.chat.ChatEventType;
@@ -29,14 +29,14 @@ import java.nio.charset.StandardCharsets;
 @Slf4j
 public class ChatPresenceService {
     private final SimpMessagingTemplate messagingTemplate;
-    private final AppProperties properties;
+    private final ChatProperties properties;
     private final Clock clock;
     private final ConversationParticipantRepository participantRepository;
     private final Map<String, AtomicInteger> sessions = new ConcurrentHashMap<>();
 
     @Autowired
     public ChatPresenceService(SimpMessagingTemplate messagingTemplate,
-                               AppProperties properties,
+                               ChatProperties properties,
                                Clock clock,
                                ConversationParticipantRepository participantRepository) {
         this.messagingTemplate = messagingTemplate;
@@ -45,7 +45,7 @@ public class ChatPresenceService {
         this.participantRepository = participantRepository;
     }
 
-    public ChatPresenceService(SimpMessagingTemplate messagingTemplate, AppProperties properties, Clock clock) {
+    public ChatPresenceService(SimpMessagingTemplate messagingTemplate, ChatProperties properties, Clock clock) {
         this(messagingTemplate, properties, clock, null);
     }
 
@@ -85,13 +85,13 @@ public class ChatPresenceService {
         }
 
         ChatEvent event = ChatEvent.create(
-                properties.getChat().getWebsocketProtocolVersion(), eventType, null, null, null,
+                properties.getWebsocketProtocolVersion(), eventType, null, null, null,
                 LocalDateTime.now(clock), Map.of(ChatMetadata.Presence.USERNAME, stableHandle,
                         ChatMetadata.Presence.ONLINE, online));
 
         for (String partnerEmail : partnerEmails) {
             try {
-                messagingTemplate.convertAndSendToUser(partnerEmail, properties.getChat().getPresenceDestination(), event);
+                messagingTemplate.convertAndSendToUser(partnerEmail, properties.getPresenceDestination(), event);
             } catch (Exception e) {
                 log.warn("Presence event delivery failed for partner: {}", partnerEmail, e);
             }

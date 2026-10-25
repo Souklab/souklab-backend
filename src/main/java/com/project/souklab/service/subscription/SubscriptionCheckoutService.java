@@ -7,7 +7,6 @@ import com.project.souklab.analytics.AnalyticsMetadata;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.project.souklab.config.AppProperties;
 import com.project.souklab.analytics.ActivityEventService;
 import com.project.souklab.config.ChargilyProperties;
 import com.project.souklab.dao.ArtisanSubscriptionRepository;
@@ -52,7 +51,7 @@ public class SubscriptionCheckoutService {
     private final PaymentRepository paymentRepository;
     private final ChargilyCheckoutClient chargilyCheckoutClient;
     private final SubscriptionPlanRules rules;
-    private final AppProperties appProperties;
+    private final ChargilyProperties chargilyProperties;
     private final ObjectMapper objectMapper;
     private final NotificationService notificationService;
     private final UserRepository userRepository;
@@ -104,7 +103,7 @@ public class SubscriptionCheckoutService {
     private SubscriptionCheckoutResponse createCheckout(User user, SubscriptionCheckoutRequest request, String key) {
         SubscriptionPlan plan = planRepository.findById(request.getPlanId()).filter(SubscriptionPlan::isActive)
                 .orElseThrow(() -> new BadRequestException("Subscription plan is not available"));
-        if (!appProperties.getChargily().isEnabled()) {
+        if (!chargilyProperties.isEnabled()) {
             throw new BadRequestException("Chargily payments are not enabled in this environment");
         }
         rules.validateDzdAmount(plan.getAmount());
@@ -132,7 +131,7 @@ public class SubscriptionCheckoutService {
         payment.setIdempotencyKey(key);
         paymentRepository.saveAndFlush(payment);
 
-        ChargilyProperties config = appProperties.getChargily();
+        ChargilyProperties config = chargilyProperties;
         ChargilyCheckoutResponse provider = chargilyCheckoutClient.createCheckout(ChargilyCheckoutRequest.builder()
                 .amount(plan.getAmount())
                 .currency(plan.getCurrency())

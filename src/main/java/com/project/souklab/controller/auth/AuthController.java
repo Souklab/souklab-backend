@@ -1,6 +1,6 @@
 package com.project.souklab.controller.auth;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.OAuthProperties;
 import com.project.souklab.dto.auth.ChangePasswordRequestDTO;
 import com.project.souklab.dto.auth.CompleteProfileRequestDTO;
 import com.project.souklab.dto.auth.ForgotPasswordRequestDTO;
@@ -63,7 +63,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final ProfileService profileService;
-    private final AppProperties appProperties;
+    private final OAuthProperties oAuthProperties;
     private final Optional<AuthorizationCodeStore> authorizationCodeStore;
 
     /**
@@ -247,7 +247,7 @@ public class AuthController {
                 .httpOnly(true)
                 .secure(request.isSecure())
                 .sameSite("Lax")
-                .maxAge(appProperties.getOauth().getIntentCookieMaxAgeSeconds())
+                .maxAge(oAuthProperties.getIntentCookieMaxAgeSeconds())
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }

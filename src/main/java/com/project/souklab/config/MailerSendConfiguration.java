@@ -12,14 +12,14 @@ public class MailerSendConfiguration {
     /**
      * Creates the MailerSend client with externally configured connection and read timeouts.
      *
-     * @param appProperties application configuration containing MailerSend timeouts
+     * @param mailerSendProperties application configuration containing MailerSend timeouts
      * @return bounded MailerSend HTTP client
      */
     @Bean(name = "mailerSendRestTemplate")
-    public RestTemplate mailerSendRestTemplate(AppProperties appProperties) {
+    public RestTemplate mailerSendRestTemplate(MailerSendProperties mailerSendProperties) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(appProperties.getMailersend().getConnectionTimeout());
-        requestFactory.setReadTimeout(appProperties.getMailersend().getReadTimeout());
+        requestFactory.setConnectTimeout(mailerSendProperties.getConnectionTimeout());
+        requestFactory.setReadTimeout(mailerSendProperties.getReadTimeout());
         return new RestTemplate(requestFactory);
     }
 }

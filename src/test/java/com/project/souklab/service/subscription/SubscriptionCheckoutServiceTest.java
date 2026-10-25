@@ -1,7 +1,7 @@
 package com.project.souklab.service.subscription;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.ChargilyProperties;
 import com.project.souklab.dao.ArtisanSubscriptionRepository;
 import com.project.souklab.dao.ClientSubscriptionRepository;
 import com.project.souklab.dao.PaymentRepository;
@@ -50,7 +50,7 @@ class SubscriptionCheckoutServiceTest {
                 paymentRepository,
                 mock(ChargilyCheckoutClient.class),
                 mock(SubscriptionPlanRules.class),
-                new AppProperties(),
+                new ChargilyProperties(),
                 new ObjectMapper(),
                 mock(NotificationService.class),
                 userRepository);
@@ -89,8 +89,8 @@ class SubscriptionCheckoutServiceTest {
         ArtisanSubscriptionRepository artisanRepo = mock(ArtisanSubscriptionRepository.class);
         ClientSubscriptionRepository clientRepo = mock(ClientSubscriptionRepository.class);
         SubscriptionPlanRepository planRepo = mock(SubscriptionPlanRepository.class);
-        AppProperties props = new AppProperties();
-        props.getChargily().setEnabled(true);
+        ChargilyProperties props = new ChargilyProperties();
+        props.setEnabled(true);
 
         SubscriptionCheckoutService svc = new SubscriptionCheckoutService(
                 currentUserProvider, planRepo, artisanRepo, clientRepo,

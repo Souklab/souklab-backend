@@ -7,7 +7,7 @@ import com.project.souklab.analytics.AnalyticsEvent;
 import com.project.souklab.analytics.AnalyticsMetadata;
 
 import com.project.souklab.analytics.ActivityEventService;
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.FormationProperties;
 import com.project.souklab.dao.ArtisanRepository;
 import com.project.souklab.dao.FormationEnrollmentRepository;
 import com.project.souklab.dao.FormationFileRepository;
@@ -67,7 +67,7 @@ public class FormationEnrollmentService {
     private final ArtisanRepository artisanRepository;
     private final FormationFileRepository formationFileRepository;
     private final StorageService storageService;
-    private final AppProperties appProperties;
+    private final FormationProperties formationProperties;
     private final Clock clock;
     private ActivityEventService activityEventService;
 
@@ -91,7 +91,7 @@ public class FormationEnrollmentService {
                 ? pageable
                 : (pageable != null)
                 ? PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.ASC, SORT_PROPERTY_SCHEDULED_AT))
-                : PageRequest.of(DEFAULT_PAGE_NUMBER, appProperties.getFormation().getPagination().getDefaultPageSize(), Sort.by(Sort.Direction.ASC, SORT_PROPERTY_SCHEDULED_AT));
+                : PageRequest.of(DEFAULT_PAGE_NUMBER, formationProperties.getPagination().getDefaultPageSize(), Sort.by(Sort.Direction.ASC, SORT_PROPERTY_SCHEDULED_AT));
 
         Page<Formation> formations;
         if (trade == null && region == null && online == null) {
@@ -129,7 +129,7 @@ public class FormationEnrollmentService {
     public FormationPublicViewDTO getPublishedFormationDetails(String formationId) {
         Formation formation = formationRepository.findWithLockByIdAndDeletedAtIsNull(formationId)
                 .or(() -> formationRepository.findByIdAndDeletedAtIsNull(formationId))
-                .filter(f -> f.getStatus() == FormationStatus.PUBLISHED)
+                .filter(f -> f.getStatus() == FormationStatus.PUBLISHED || f.getStatus() == FormationStatus.COMPLETED)
                 .orElseThrow(() -> new ResourceNotFoundException("Published formation not found with ID: " + formationId));
 
         Artisan artisan = resolveAuthenticatedArtisan();
@@ -139,6 +139,10 @@ public class FormationEnrollmentService {
                 formation.getId(),
                 artisan.getId(),
                 EnrollmentStatus.CONFIRMED
+        ) || formationEnrollmentRepository.existsByFormationIdAndArtisanIdAndStatus(
+                formation.getId(),
+                artisan.getId(),
+                EnrollmentStatus.ATTENDED
         );
 
         long activeEnrollmentsCount = formationEnrollmentRepository.countByFormationIdAndStatus(
@@ -227,7 +231,7 @@ public class FormationEnrollmentService {
                 .findByFormationIdAndArtisanIdAndStatus(formationId, artisan.getId(), EnrollmentStatus.CONFIRMED)
                 .orElseThrow(() -> new ResourceNotFoundException("Active confirmed enrollment not found for formation ID: " + formationId));
 
-        int deadlineHours = appProperties.getFormation().getCancellation().getDeadlineHours();
+        int deadlineHours = formationProperties.getCancellation().getDeadlineHours();
         if (formation.getScheduledAt() != null) {
             LocalDateTime cutoff = formation.getScheduledAt().minusHours(deadlineHours);
             if (LocalDateTime.now(clock).isAfter(cutoff)) {
@@ -289,7 +293,7 @@ public class FormationEnrollmentService {
                 ? pageable
                 : (pageable != null)
                 ? PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.ASC, SORT_PROPERTY_ENROLLED_AT))
-                : PageRequest.of(DEFAULT_PAGE_NUMBER, appProperties.getFormation().getPagination().getDefaultPageSize(), Sort.by(Sort.Direction.ASC, SORT_PROPERTY_ENROLLED_AT));
+                : PageRequest.of(DEFAULT_PAGE_NUMBER, formationProperties.getPagination().getDefaultPageSize(), Sort.by(Sort.Direction.ASC, SORT_PROPERTY_ENROLLED_AT));
         return formationEnrollmentRepository.findByFormationIdAndDeletedAtIsNull(formationId, effectivePageable)
                 .map(enrollment -> new FormationEnrollmentSummaryDTO(
                         enrollment.getId(),
@@ -314,7 +318,7 @@ public class FormationEnrollmentService {
                 ? pageable
                 : (pageable != null)
                 ? PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.DESC, SORT_PROPERTY_ENROLLED_AT))
-                : PageRequest.of(DEFAULT_PAGE_NUMBER, appProperties.getFormation().getPagination().getDefaultPageSize(), Sort.by(Sort.Direction.DESC, SORT_PROPERTY_ENROLLED_AT));
+                : PageRequest.of(DEFAULT_PAGE_NUMBER, formationProperties.getPagination().getDefaultPageSize(), Sort.by(Sort.Direction.DESC, SORT_PROPERTY_ENROLLED_AT));
 
         Page<FormationEnrollment> enrollments = formationEnrollmentRepository
                 .findByArtisanIdAndDeletedAtIsNull(artisan.getId(), effectivePageable);
@@ -351,6 +355,10 @@ public class FormationEnrollmentService {
                 formationId,
                 artisan.getId(),
                 EnrollmentStatus.CONFIRMED
+        ) || formationEnrollmentRepository.existsByFormationIdAndArtisanIdAndStatus(
+                formationId,
+                artisan.getId(),
+                EnrollmentStatus.ATTENDED
         );
 
         if (!isAuthor && !isEnrolled) {

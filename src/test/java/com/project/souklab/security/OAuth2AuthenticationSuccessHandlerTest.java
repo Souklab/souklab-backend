@@ -1,6 +1,6 @@
 package com.project.souklab.security;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.OAuthProperties;
 import com.project.souklab.dto.auth.JwtResponseDTO;
 import com.project.souklab.exception.AppException;
 import com.project.souklab.service.auth.AuthService;
@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.Authentication;
@@ -37,14 +38,14 @@ class OAuth2AuthenticationSuccessHandlerTest {
     @Mock
     private AuthorizationCodeStore authorizationCodeStore;
 
-    private AppProperties appProperties;
+    private OAuthProperties oAuthProperties;
     private OAuth2AuthenticationSuccessHandler successHandler;
 
     @BeforeEach
     void setUp() {
-        appProperties = new AppProperties();
-        appProperties.getOauth().getGoogle().setAuthorizedRedirectUri("http://localhost/connexion/google");
-        successHandler = new OAuth2AuthenticationSuccessHandler(authService, servletResponseUtil, authorizationCodeStore, appProperties);
+        oAuthProperties = new OAuthProperties();
+        oAuthProperties.getGoogle().setAuthorizedRedirectUri("http://localhost/connexion/google");
+        successHandler = new OAuth2AuthenticationSuccessHandler(authService, servletResponseUtil, authorizationCodeStore, oAuthProperties);
     }
 
     @Test
@@ -68,7 +69,7 @@ class OAuth2AuthenticationSuccessHandlerTest {
     @Test
     @DisplayName("onAuthenticationSuccess: falls back to default localhost redirect URI if configured URI is null")
     void onAuthenticationSuccess_withNullAuthorizedUri_fallsBackToDefault() throws Exception {
-        appProperties.getOauth().getGoogle().setAuthorizedRedirectUri(null);
+        oAuthProperties.getGoogle().setAuthorizedRedirectUri(null);
 
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -94,7 +95,7 @@ class OAuth2AuthenticationSuccessHandlerTest {
         OAuth2User principal = mock(OAuth2User.class);
         when(auth.getPrincipal()).thenReturn(principal);
 
-        AppException ex = new AppException(org.springframework.http.HttpStatus.FORBIDDEN, "ACCOUNT_PENDING", "Account pending approval");
+        AppException ex = new AppException(HttpStatus.FORBIDDEN, "ACCOUNT_PENDING", "Account pending approval");
         when(authService.processOAuth2Success(eq(principal), any(), eq(request))).thenThrow(ex);
 
         successHandler.onAuthenticationSuccess(request, response, auth);

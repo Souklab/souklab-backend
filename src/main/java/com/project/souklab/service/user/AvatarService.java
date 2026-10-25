@@ -5,7 +5,7 @@ import com.project.souklab.util.LogSanitizer;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.project.souklab.config.AvatarProperties;
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.AppStorageProperties;
 import com.project.souklab.config.OperationalMetrics;
 import com.project.souklab.dao.UserAvatarRepository;
 import com.project.souklab.dao.UserRepository;
@@ -61,7 +61,7 @@ public class AvatarService {
     private final TransactionTemplate transactionTemplate;
     private final Clock clock;
     private final AvatarProperties avatarProperties;
-    private final AppProperties appProperties;
+    private final AppStorageProperties appStorageProperties;
     private final CurrentUserProvider currentUserProvider;
     private final OperationalMetrics metrics;
 
@@ -75,7 +75,7 @@ public class AvatarService {
                          TransactionTemplate transactionTemplate,
                          Clock clock,
                          AvatarProperties avatarProperties,
-                         AppProperties appProperties,
+                         AppStorageProperties appStorageProperties,
                          CurrentUserProvider currentUserProvider,
                          OperationalMetrics metrics) {
         this.userAvatarRepository = userAvatarRepository;
@@ -87,7 +87,7 @@ public class AvatarService {
         this.transactionTemplate = transactionTemplate;
         this.clock = clock;
         this.avatarProperties = avatarProperties;
-        this.appProperties = appProperties;
+        this.appStorageProperties = appStorageProperties;
         this.currentUserProvider = currentUserProvider;
         this.metrics = metrics;
     }
@@ -102,11 +102,11 @@ public class AvatarService {
                          TransactionTemplate transactionTemplate,
                          Clock clock,
                          AvatarProperties avatarProperties,
-                         AppProperties appProperties,
+                         AppStorageProperties appStorageProperties,
                          CurrentUserProvider currentUserProvider) {
         this(userAvatarRepository, userRepository, fileValidator, virusScanService,
                 imageProcessingService, storageService, transactionTemplate, clock,
-                avatarProperties, appProperties, currentUserProvider, OperationalMetrics.noop());
+                avatarProperties, appStorageProperties, currentUserProvider, OperationalMetrics.noop());
     }
 
     /** Compatibility constructor retained for focused unit tests and existing callers. */
@@ -121,7 +121,7 @@ public class AvatarService {
                          AvatarProperties avatarProperties) {
         this(userAvatarRepository, userRepository, fileValidator, virusScanService,
                 imageProcessingService, storageService, transactionTemplate, clock,
-                avatarProperties, new AppProperties(), null, OperationalMetrics.noop());
+                avatarProperties, new AppStorageProperties(), null, OperationalMetrics.noop());
     }
 
     /** Service entry point that owns principal and entity resolution. */
@@ -414,7 +414,7 @@ public class AvatarService {
      * @param thumbnailKey the storage key of the active thumbnail image variant
      */
     private void syncUserAvatar(User user, String thumbnailKey) {
-        user.setAvatarUrl(appProperties.getStorage().toUrl(thumbnailKey));
+        user.setAvatarUrl(appStorageProperties.toUrl(thumbnailKey));
         userRepository.save(user);
     }
 
@@ -427,9 +427,9 @@ public class AvatarService {
     private AvatarResponseDTO mapToResponseDTO(UserAvatar avatar) {
         return AvatarResponseDTO.builder()
                 .id(avatar.getId())
-                .urlOriginal(appProperties.getStorage().toUrl(avatar.getStorageKeyOriginal()))
-                .urlMedium(appProperties.getStorage().toUrl(avatar.getStorageKeyMedium()))
-                .urlThumbnail(appProperties.getStorage().toUrl(avatar.getStorageKeyThumbnail()))
+                .urlOriginal(appStorageProperties.toUrl(avatar.getStorageKeyOriginal()))
+                .urlMedium(appStorageProperties.toUrl(avatar.getStorageKeyMedium()))
+                .urlThumbnail(appStorageProperties.toUrl(avatar.getStorageKeyThumbnail()))
                 .originalFilename(avatar.getOriginalFilename())
                 .contentType(avatar.getContentType())
                 .fileSize(avatar.getFileSize())

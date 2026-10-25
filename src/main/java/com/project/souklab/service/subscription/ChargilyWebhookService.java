@@ -15,7 +15,7 @@ import com.project.souklab.analytics.ActivityEventService;
 import com.project.souklab.dao.ClientSubscriptionRepository;
 import com.project.souklab.dao.PaymentRepository;
 import com.project.souklab.dao.PaymentWebhookLogRepository;
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.SubscriptionProperties;
 import com.project.souklab.integration.chargily.ChargilyWebhookPayload;
 import com.project.souklab.model.ArtisanSubscription;
 import com.project.souklab.model.ClientSubscription;
@@ -54,7 +54,7 @@ public class ChargilyWebhookService {
     private final SubscriptionPlanRules rules;
     private final NotificationService notificationService;
     private final WebhookEventClaimService webhookEventClaimService;
-    private final AppProperties appProperties;
+    private final SubscriptionProperties subscriptionProperties;
     private final Clock clock;
     private final AuditLogService auditLogService;
     private ActivityEventService activityEventService;
@@ -85,8 +85,8 @@ public class ChargilyWebhookService {
                     payload.getId() != null && !payload.getId().isBlank());
             throw new MalformedWebhookException("Webhook event timestamp is invalid");
         }
-        if (appProperties.getSubscription().getWebhookRetention() != null
-                && eventCreatedAt.isBefore(Instant.now(clock).minus(appProperties.getSubscription().getWebhookRetention()))) {
+        if (subscriptionProperties.getWebhookRetention() != null
+                && eventCreatedAt.isBefore(Instant.now(clock).minus(subscriptionProperties.getWebhookRetention()))) {
             log.warn("Rejecting stale Chargily webhook: eventAgeSeconds={}",
                     Math.max(0, Instant.now(clock).getEpochSecond() - eventCreatedAt.getEpochSecond()));
             throw new MalformedWebhookException("Webhook event is stale");
@@ -104,7 +104,7 @@ public class ChargilyWebhookService {
                 return;
             }
         }
-        LocalDateTime staleBefore = LocalDateTime.now(clock).minus(appProperties.getSubscription().getLifecycleInterval());
+        LocalDateTime staleBefore = LocalDateTime.now(clock).minus(subscriptionProperties.getLifecycleInterval());
         if (!webhookEventClaimService.acquireProcessing(payload.getId(), staleBefore)) {
             return;
         }

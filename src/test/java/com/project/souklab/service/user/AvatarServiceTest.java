@@ -1,7 +1,7 @@
 package com.project.souklab.service.user;
 
+import com.project.souklab.config.AppStorageProperties;
 import com.project.souklab.config.AvatarProperties;
-import com.project.souklab.config.AppProperties;
 import com.project.souklab.dao.UserAvatarRepository;
 import com.project.souklab.dao.UserRepository;
 import com.project.souklab.dto.common.PaginatedResponse;
@@ -111,8 +111,8 @@ class AvatarServiceTest {
         avatarProperties = new AvatarProperties();
         avatarProperties.setMaxPerUser(10L);
         avatarProperties.setAllowedMimeTypes(List.of("image/jpeg", "image/png", "image/webp"));
-        AppProperties appProperties = new AppProperties();
-        appProperties.getStorage().setFileServingPrefix("/api/v1/files/");
+        AppStorageProperties appProperties = new AppStorageProperties();
+        appProperties.setFileServingPrefix("/api/v1/files/");
         avatarService = new AvatarService(
                 userAvatarRepository,
                 userRepository,
@@ -499,8 +499,8 @@ class AvatarServiceTest {
                 imageProcessingService, storageService, transactionTemplate, clock, avatarProperties);
         assertThat(compatibilityService).isNotNull();
 
-        AppProperties properties = new AppProperties();
-        properties.getStorage().setFileServingPrefix("/api/v1/files/");
+        AppStorageProperties properties = new AppStorageProperties();
+        properties.setFileServingPrefix("/api/v1/files/");
         AvatarService currentUserService = new AvatarService(
                 userAvatarRepository, userRepository, fileValidator, virusScanService,
                 imageProcessingService, storageService, transactionTemplate, clock,

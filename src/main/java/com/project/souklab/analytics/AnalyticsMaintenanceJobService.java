@@ -1,7 +1,7 @@
 package com.project.souklab.analytics;
 
 import com.project.souklab.config.AnalyticsProperties;
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.ChatProperties;
 import com.project.souklab.dao.UserRepository;
 import com.project.souklab.dao.analytics.AnalyticsMaintenanceJobRepository;
 import com.project.souklab.dto.analytics.AnalyticsMaintenanceJobEvent;
@@ -44,13 +44,13 @@ public class AnalyticsMaintenanceJobService {
     private final TransactionTemplate transactionTemplate;
     private final AuditLogService auditLogService;
     private SimpMessagingTemplate messagingTemplate;
-    private AppProperties appProperties;
+    private ChatProperties chatProperties;
 
     @Autowired(required = false)
     void setMessagingTemplate(SimpMessagingTemplate value) { this.messagingTemplate = value; }
 
     @Autowired(required = false)
-    void setAppProperties(AppProperties value) { this.appProperties = value; }
+    void setChatProperties(ChatProperties value) { this.chatProperties = value; }
 
     public AnalyticsMaintenanceJobResponse submit(AnalyticsMaintenanceOperation operation,
                                                    AnalyticsRebuildRequest request,
@@ -135,9 +135,9 @@ public class AnalyticsMaintenanceJobService {
     }
 
     private void notifyOwner(AnalyticsMaintenanceJob job) {
-        if (messagingTemplate == null || appProperties == null) return;
+        if (messagingTemplate == null || chatProperties == null) return;
         users.findById(job.getOwnerId()).ifPresent(owner -> messagingTemplate.convertAndSendToUser(
-                owner.getEmail(), appProperties.getChat().getNotificationDestination(),
+                owner.getEmail(), chatProperties.getNotificationDestination(),
                 new AnalyticsMaintenanceJobEvent(job.getId(), job.getOperation(), job.getStatus(), job.getFailureMessage())));
     }
 

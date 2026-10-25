@@ -1,5 +1,6 @@
 package com.project.souklab.service.notification;
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.ChatProperties;
+import com.project.souklab.config.NotificationProperties;
 
 import com.project.souklab.dao.NotificationRepository;
 import com.project.souklab.dao.UserRepository;
@@ -72,15 +73,17 @@ class NotificationServiceTest {
     void setUp() {
         fixedClock = Clock.fixed(FIXED_INSTANT, ZONE_ID);
         fixedNow = LocalDateTime.now(fixedClock);
-        AppProperties appProperties = new AppProperties();
-        appProperties.getChat().setNotificationDestination("/queue/notifications");
-        appProperties.getNotification().setMaxMessageLength(4000);
+        ChatProperties chatProperties = new ChatProperties();
+        chatProperties.setNotificationDestination("/queue/notifications");
+        NotificationProperties notificationProperties = new NotificationProperties();
+        notificationProperties.setMaxMessageLength(4000);
         notificationService = new NotificationService(
                 notificationRepository,
                 userRepository,
                 messagingTemplate,
                 fixedClock,
-                appProperties
+                chatProperties,
+                notificationProperties
         );
         SecurityContextHolder.clearContext();
 

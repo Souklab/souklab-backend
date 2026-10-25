@@ -1,6 +1,6 @@
 package com.project.souklab.security;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.JwtProperties;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
@@ -14,8 +14,8 @@ class JwtUtilsConfigurationTest {
 
     @Test
     void rejectsShortSecrets() {
-        AppProperties properties = validProperties();
-        properties.getJwt().setSecret("too-short");
+        JwtProperties properties = validProperties();
+        properties.setSecret("too-short");
 
         assertThatThrownBy(() -> new JwtUtils(properties, Clock.systemUTC()).validateConfiguration())
                 .isInstanceOf(IllegalStateException.class)
@@ -24,19 +24,19 @@ class JwtUtilsConfigurationTest {
 
     @Test
     void rejectsNonPositiveExpiration() {
-        AppProperties properties = validProperties();
-        properties.getJwt().setAccessTokenExpirationMs(0L);
+        JwtProperties properties = validProperties();
+        properties.setAccessTokenExpirationMs(0L);
 
         assertThatThrownBy(() -> new JwtUtils(properties, Clock.systemUTC()).validateConfiguration())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("access-token-expiration-ms");
     }
 
-    private AppProperties validProperties() {
-        AppProperties properties = new AppProperties();
-        properties.getJwt().setSecret("a-valid-secret-with-at-least-32-utf8-bytes");
-        properties.getJwt().setAccessTokenExpirationMs(3_600_000L);
-        properties.getJwt().setRefreshTokenExpirationMs(86_400_000L);
+    private JwtProperties validProperties() {
+        JwtProperties properties = new JwtProperties();
+        properties.setSecret("a-valid-secret-with-at-least-32-utf8-bytes");
+        properties.setAccessTokenExpirationMs(3_600_000L);
+        properties.setRefreshTokenExpirationMs(86_400_000L);
         return properties;
     }
 }

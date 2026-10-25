@@ -1,6 +1,6 @@
 package com.project.souklab.security;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.OAuthProperties;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -43,7 +43,7 @@ public class OAuth2AuthenticationFailureHandler implements AuthenticationFailure
             Map.entry("oauth2_error", "oauth2_error")
     );
 
-    private final AppProperties appProperties;
+    private final OAuthProperties oAuthProperties;
 
     @Override
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
@@ -67,11 +67,10 @@ public class OAuth2AuthenticationFailureHandler implements AuthenticationFailure
 
     String resolveAuthorizedRedirectUri(HttpServletRequest request) {
         String configured = null;
-        if (appProperties != null && appProperties.getOauth() != null
-                && appProperties.getOauth().getGoogle() != null
-                && appProperties.getOauth().getGoogle().getAuthorizedRedirectUri() != null
-                && !appProperties.getOauth().getGoogle().getAuthorizedRedirectUri().isBlank()) {
-            configured = appProperties.getOauth().getGoogle().getAuthorizedRedirectUri().trim();
+        if (oAuthProperties != null && oAuthProperties.getGoogle() != null
+                && oAuthProperties.getGoogle().getAuthorizedRedirectUri() != null
+                && !oAuthProperties.getGoogle().getAuthorizedRedirectUri().isBlank()) {
+            configured = oAuthProperties.getGoogle().getAuthorizedRedirectUri().trim();
         }
         if (configured == null) {
             configured = "http://localhost/connexion/google";

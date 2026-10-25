@@ -7,7 +7,9 @@ import com.project.souklab.service.profile.ProfileService;
 import com.project.souklab.analytics.AnalyticsEvent;
 import com.project.souklab.analytics.AnalyticsMetadata;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.AuthProperties;
+import com.project.souklab.config.JwtProperties;
+import com.project.souklab.config.SupportProperties;
 import com.project.souklab.dao.ClientRepository;
 import com.project.souklab.dao.OAuthIdentityRepository;
 import com.project.souklab.dao.RefreshTokenRepository;
@@ -94,7 +96,9 @@ public class AuthService {
     private final NotificationService notificationService;
     private final JwtUtils jwtUtils;
     private final RefreshTokenService refreshTokenService;
-    private final AppProperties appProperties;
+    private final JwtProperties jwtProperties;
+    private final AuthProperties authProperties;
+    private final SupportProperties supportProperties;
     private final VerificationTokenService verificationTokenService;
     private final EmailUtil emailUtil;
     private final AuditLogService auditLogService;
@@ -113,7 +117,9 @@ public class AuthService {
                        NotificationService notificationService,
                        JwtUtils jwtUtils,
                        RefreshTokenService refreshTokenService,
-                       AppProperties appProperties,
+                       JwtProperties jwtProperties,
+                       AuthProperties authProperties,
+                       SupportProperties supportProperties,
                        VerificationTokenService verificationTokenService,
                        EmailUtil emailUtil,
                        AuditLogService auditLogService,
@@ -129,7 +135,9 @@ public class AuthService {
         this.notificationService = notificationService;
         this.jwtUtils = jwtUtils;
         this.refreshTokenService = refreshTokenService;
-        this.appProperties = appProperties;
+        this.jwtProperties = jwtProperties;
+        this.authProperties = authProperties;
+        this.supportProperties = supportProperties;
         this.verificationTokenService = verificationTokenService;
         this.emailUtil = emailUtil;
         this.auditLogService = auditLogService;
@@ -148,14 +156,16 @@ public class AuthService {
                        NotificationService notificationService,
                        JwtUtils jwtUtils,
                        RefreshTokenService refreshTokenService,
-                       AppProperties appProperties,
+                       JwtProperties jwtProperties,
+                       AuthProperties authProperties,
+                       SupportProperties supportProperties,
                        VerificationTokenService verificationTokenService,
                        EmailUtil emailUtil,
                        AuditLogService auditLogService,
                        Clock clock,
                        ProfileResponseMapper profileResponseMapper) {
         this(userRepository, clientRepository, permissionRepository, refreshTokenRepository, oauthIdentityRepository,
-                passwordEncoder, notificationService, jwtUtils, refreshTokenService, appProperties,
+                passwordEncoder, notificationService, jwtUtils, refreshTokenService, jwtProperties, authProperties, supportProperties,
                 verificationTokenService, emailUtil, auditLogService, clock, profileResponseMapper, null);
     }
 
@@ -168,14 +178,16 @@ public class AuthService {
                        NotificationService notificationService,
                        JwtUtils jwtUtils,
                        RefreshTokenService refreshTokenService,
-                       AppProperties appProperties,
+                       JwtProperties jwtProperties,
+                       AuthProperties authProperties,
+                       SupportProperties supportProperties,
                        VerificationTokenService verificationTokenService,
                        EmailUtil emailUtil,
                        AuditLogService auditLogService,
                        Clock clock,
                        ProfileResponseMapper profileResponseMapper) {
         this(userRepository, null, permissionRepository, refreshTokenRepository, oauthIdentityRepository,
-                passwordEncoder, notificationService, jwtUtils, refreshTokenService, appProperties,
+                passwordEncoder, notificationService, jwtUtils, refreshTokenService, jwtProperties, authProperties, supportProperties,
                 verificationTokenService, emailUtil, auditLogService, clock, profileResponseMapper, null);
     }
 
@@ -317,7 +329,7 @@ public class AuthService {
                 .accessToken(accessToken)
                 .refreshToken(newToken.getToken())
                 .tokenType(TokenType.BEARER)
-                .expiresIn(appProperties.getJwt().getAccessTokenExpirationMs() / MS_PER_SECOND)
+                .expiresIn(jwtProperties.getAccessTokenExpirationMs() / MS_PER_SECOND)
                 .user(profileResponseMapper.mapToProfileResponse(user))
                 .permissions(canonicalPermissions(user))
                 .build();
@@ -622,7 +634,7 @@ public class AuthService {
                 .accessToken(accessToken)
                 .refreshToken(refreshToken.getToken())
                 .tokenType(TokenType.BEARER)
-                .expiresIn(appProperties.getJwt().getAccessTokenExpirationMs() / MS_PER_SECOND)
+                .expiresIn(jwtProperties.getAccessTokenExpirationMs() / MS_PER_SECOND)
                 .user(profileResponseMapper.mapToProfileResponse(user))
                 .permissions(canonicalPermissions(user))
                 .build();
@@ -739,8 +751,8 @@ public class AuthService {
     private UnauthorizedException recordFailedAttempt(User user) {
         int attempts = user.getFailedLoginAttempts() + 1;
         user.setFailedLoginAttempts(attempts);
-        int maxAttempts = appProperties.getAuth().getLockout().getMaxAttempts();
-        int lockoutMinutes = appProperties.getAuth().getLockout().getDurationMinutes();
+        int maxAttempts = authProperties.getLockout().getMaxAttempts();
+        int lockoutMinutes = authProperties.getLockout().getDurationMinutes();
         if (attempts >= maxAttempts) {
             user.setLockedUntil(LocalDateTime.now(clock).plusMinutes(lockoutMinutes));
         }
@@ -767,12 +779,12 @@ public class AuthService {
                 user.setBannedUntil(null);
                 user.setBanReason(null);
             } else {
-                throw new ForbiddenException("ACCOUNT_SUSPENDED", "Account is suspended: " + (user.getBanReason() != null ? user.getBanReason() : appProperties.getSupport().getContactMessage()));
+                throw new ForbiddenException("ACCOUNT_SUSPENDED", "Account is suspended: " + (user.getBanReason() != null ? user.getBanReason() : supportProperties.getContactMessage()));
             }
         }
 
         if (user.getStatus() == AccountStatus.REJECTED) {
-            throw new ForbiddenException("ACCOUNT_REJECTED", "Account registration was rejected: " + (user.getBanReason() != null ? user.getBanReason() : appProperties.getSupport().getContactMessage()));
+            throw new ForbiddenException("ACCOUNT_REJECTED", "Account registration was rejected: " + (user.getBanReason() != null ? user.getBanReason() : supportProperties.getContactMessage()));
         }
 
         if (user.getStatus() == AccountStatus.PENDING) {

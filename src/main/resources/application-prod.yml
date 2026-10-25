@@ -1,0 +1,52 @@
+# Production requires an externally managed schema and search indexes.
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        search:
+          schema_management:
+            strategy: ${HIBERNATE_SEARCH_SCHEMA_MANAGEMENT}
+  flyway:
+    enabled: ${FLYWAY_ENABLED}
+  mail:
+    properties:
+      mail:
+        debug: ${SPRING_MAIL_DEBUG:false}
+        smtp:
+          connectiontimeout: ${SMTP_CONNECTION_TIMEOUT:5000}
+          timeout: ${SMTP_READ_TIMEOUT:10000}
+          writetimeout: ${SMTP_WRITE_TIMEOUT:10000}
+
+app:
+  rate-limit:
+    backend: redis
+  admin:
+    bootstrap-enabled: ${APP_ADMIN_BOOTSTRAP_ENABLED}
+
+logging:
+  level:
+    root: INFO
+    com.project.souklab: INFO
+    org.hibernate.search: WARN
+    org.hibernate.search.backend.elasticsearch.request: WARN
+    org.hibernate.search.backend.elasticsearch.client.rest.request: WARN
+    org.elasticsearch.client: WARN
+
+management:
+  endpoint:
+    health:
+      show-details: when-authorized
+      group:
+        readiness:
+          include: readinessState,db,storage,search,relay,antivirus,redis,rabbit,chargily
+
+# Uploaded content must be scanned before it is made available.
+storage:
+  virus-scan:
+    enabled: ${STORAGE_VIRUS_SCAN_ENABLED}
+  s3:
+    auto-create-bucket: false

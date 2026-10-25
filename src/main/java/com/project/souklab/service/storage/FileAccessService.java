@@ -115,6 +115,9 @@ public class FileAccessService {
         if (isAdministrator() || certification.getArtisan().getUser().getEmail().equalsIgnoreCase(SecurityUtils.getCurrentUsername())) {
             return;
         }
+        if (certification.isVerified()) {
+            return;
+        }
         throw new ForbiddenException("Access denied.");
     }
 
@@ -128,7 +131,9 @@ public class FileAccessService {
         Formation formation = file.getFormation();
         boolean isAuthor = formation.getAuthor().getId().equals(artisan.getId());
         boolean isEnrolled = formationEnrollmentRepository.existsByFormationIdAndArtisanIdAndStatus(
-                formation.getId(), artisan.getId(), EnrollmentStatus.CONFIRMED);
+                formation.getId(), artisan.getId(), EnrollmentStatus.CONFIRMED)
+                || formationEnrollmentRepository.existsByFormationIdAndArtisanIdAndStatus(
+                formation.getId(), artisan.getId(), EnrollmentStatus.ATTENDED);
         if (!isAuthor && !isEnrolled) {
             throw new ForbiddenException("Access denied.");
         }

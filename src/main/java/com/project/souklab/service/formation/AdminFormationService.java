@@ -7,7 +7,7 @@ import com.project.souklab.analytics.AnalyticsEvent;
 import com.project.souklab.analytics.AnalyticsMetadata;
 
 import com.project.souklab.analytics.ActivityEventService;
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.AppStorageProperties;
 import com.project.souklab.dao.FormationEnrollmentRepository;
 import com.project.souklab.dao.FormationFileRepository;
 import com.project.souklab.dao.FormationRepository;
@@ -63,7 +63,7 @@ public class AdminFormationService {
     private final FormationEnrollmentRepository formationEnrollmentRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
-    private final AppProperties appProperties;
+    private final AppStorageProperties appStorageProperties;
     private final Clock clock;
     private ActivityEventService activityEventService;
 
@@ -226,7 +226,7 @@ public class AdminFormationService {
         List<FormationFile> activeFiles = formationFileRepository.findByFormationIdAndDeletedAtIsNull(formation.getId());
         List<FormationReview> reviews = formationReviewRepository.findByFormationIdOrderByReviewedAtDesc(formation.getId());
         long activeEnrollments = formationEnrollmentRepository.countByFormationIdAndStatus(formation.getId(), EnrollmentStatus.CONFIRMED);
-        return FormationResponseDTO.from(formation, activeFiles, reviews, activeEnrollments, appProperties.getStorage().resolveFileServingPrefix());
+        return FormationResponseDTO.from(formation, activeFiles, reviews, activeEnrollments, appStorageProperties.resolveFileServingPrefix());
     }
 
     /**

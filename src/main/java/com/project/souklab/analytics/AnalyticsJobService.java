@@ -13,7 +13,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.souklab.config.AnalyticsProperties;
 import com.project.souklab.config.AnalyticsJobProperties;
 import com.project.souklab.config.AnalyticsExportProperties;
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.ChatProperties;
+import com.project.souklab.config.SubscriptionProperties;
 import com.project.souklab.config.OperationalMetrics;
 import com.project.souklab.dao.UserRepository;
 import com.project.souklab.dao.analytics.ActivityEventRepository;
@@ -109,7 +110,8 @@ public class AnalyticsJobService {
     private final ObjectMapper objectMapper;
     private final Clock clock;
     private final SimpMessagingTemplate messagingTemplate;
-    private final AppProperties appProperties;
+    private final SubscriptionProperties subscriptionProperties;
+    private final ChatProperties chatProperties;
     private final FeedPostRepository feedPosts;
     private final FormationRepository formations;
     private final FormationEnrollmentRepository enrollments;
@@ -345,7 +347,7 @@ public class AnalyticsJobService {
                         summary.put(AnalyticsMetric.Summary.Subscription.Lifecycle.EVENTS, lifecycleEvents);
                         summary.put(AnalyticsMetric.Summary.Payment.Checkout.CREATED, countFilteredEvent(job, AnalyticsEvent.Checkout.CREATED, from, inclusiveTo));
                         summary.put(AnalyticsMetric.Summary.Payment.State.TRANSITIONS, countFilteredEvent(job, AnalyticsEvent.Payment.State.TRANSITION, from, inclusiveTo));
-                        String collectedCurrency = appProperties.getSubscription().getCurrency();
+                        String collectedCurrency = subscriptionProperties.getCurrency();
                         long grossCollected = payments.sumAmountByStatusAndCurrencyAndCreatedAtBetween(
                                 PaymentStatus.PAID, collectedCurrency, from, to);
                         long providerFees = payments.sumFeesByStatusAndCurrencyAndCreatedAtBetween(
@@ -463,9 +465,9 @@ public class AnalyticsJobService {
     }
 
     private void notifyOwner(AnalyticsJob job, String failure) {
-        if (messagingTemplate == null || appProperties == null) return;
+        if (messagingTemplate == null || chatProperties == null) return;
         users.findById(job.getOwnerId()).ifPresent(owner -> messagingTemplate.convertAndSendToUser(
-                owner.getEmail(), appProperties.getChat().getNotificationDestination(),
+                owner.getEmail(), chatProperties.getNotificationDestination(),
                 new AnalyticsJobEvent(job.getId(), job.getStatus(), job.getReportType(), failure)));
     }
 

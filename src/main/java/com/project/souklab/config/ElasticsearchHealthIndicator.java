@@ -1,8 +1,6 @@
 package com.project.souklab.config;
 
 import com.project.souklab.analytics.AnalyticsMetric;
-import java.nio.charset.StandardCharsets;
-
 import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.health.contributor.HealthIndicator;
 import org.springframework.context.annotation.Profile;
@@ -12,6 +10,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
 
@@ -20,12 +19,12 @@ import java.util.Base64;
 @Profile({"prod", "production"})
 public class ElasticsearchHealthIndicator implements HealthIndicator {
 
-    private final AppProperties.Search properties;
+    private final SearchProperties properties;
     private final HttpClient client;
     private final OperationalMetrics metrics;
 
-    public ElasticsearchHealthIndicator(AppProperties appProperties, OperationalMetrics metrics) {
-        this.properties = appProperties.getSearch();
+    public ElasticsearchHealthIndicator(SearchProperties searchProperties, OperationalMetrics metrics) {
+        this.properties = searchProperties;
         this.metrics = metrics;
         this.client = HttpClient.newBuilder()
                 .connectTimeout(timeout(properties.getConnectionTimeout()))

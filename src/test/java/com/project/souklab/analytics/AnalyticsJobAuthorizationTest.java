@@ -1,7 +1,8 @@
 package com.project.souklab.analytics;
 import com.project.souklab.config.AnalyticsExportProperties;
 import com.project.souklab.config.AnalyticsJobProperties;
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.ChatProperties;
+import com.project.souklab.config.SubscriptionProperties;
 import com.project.souklab.dao.ArtisanFormateurRequestRepository;
 import com.project.souklab.dao.ArtisanReviewRepository;
 import com.project.souklab.dao.ArtisanSubscriptionRepository;
@@ -58,7 +59,8 @@ class AnalyticsJobAuthorizationTest {
     @Mock private ObjectMapper objectMapper;
     @Mock private Clock clock;
     @Mock private SimpMessagingTemplate messagingTemplate;
-    @Mock private AppProperties appProperties;
+    @Mock private SubscriptionProperties subscriptionProperties;
+    @Mock private ChatProperties chatProperties;
     @Mock private FeedPostRepository feedPosts;
     @Mock private FormationRepository formations;
     @Mock private FormationEnrollmentRepository enrollments;

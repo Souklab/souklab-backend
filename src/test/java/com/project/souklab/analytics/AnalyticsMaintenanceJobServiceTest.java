@@ -4,8 +4,8 @@ import org.mockito.Mockito;
 
 import com.project.souklab.config.AnalyticsProperties;
 import com.project.souklab.dao.UserRepository;
+import com.project.souklab.config.ChatProperties;
 import com.project.souklab.dao.analytics.AnalyticsMaintenanceJobRepository;
-import com.project.souklab.config.AppProperties;
 import com.project.souklab.dto.analytics.AnalyticsRebuildRequest;
 import com.project.souklab.dto.analytics.AnalyticsRebuildResponse;
 import com.project.souklab.dto.analytics.AnalyticsMaintenanceJobEvent;
@@ -63,9 +63,9 @@ class AnalyticsMaintenanceJobServiceTest {
         service = new AnalyticsMaintenanceJobService(jobs, users, properties, rebuildService,
                 backfillService, clock, executor, transactionTemplate, auditLogService);
         service.setMessagingTemplate(messagingTemplate);
-        AppProperties appProperties = new AppProperties();
-        appProperties.getChat().setNotificationDestination("/queue/analytics");
-        service.setAppProperties(appProperties);
+        ChatProperties chatProperties = new ChatProperties();
+        chatProperties.setNotificationDestination("/queue/analytics");
+        service.setChatProperties(chatProperties);
         job = new AnalyticsMaintenanceJob();
         job.setId("maintenance-1");
         job.setOwnerId("owner-1");

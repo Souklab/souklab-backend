@@ -1,6 +1,6 @@
 package com.project.souklab.security;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.JwtProperties;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -37,19 +37,19 @@ class JwtUtilsTest {
     private static final ZoneId ZONE_ID = ZoneId.of("UTC");
 
     private JwtUtils jwtUtils;
-    private AppProperties appProperties;
+    private JwtProperties jwtProperties;
     private Clock fixedClock;
 
     @BeforeEach
     void setUp() {
         fixedClock = Clock.fixed(FIXED_INSTANT, ZONE_ID);
 
-        appProperties = new AppProperties();
-        appProperties.getJwt().setSecret(TEST_SECRET);
-        appProperties.getJwt().setAccessTokenExpirationMs(ACCESS_TOKEN_EXPIRATION_MS);
-        appProperties.getJwt().setRefreshTokenExpirationMs(REFRESH_TOKEN_EXPIRATION_MS);
+        jwtProperties = new JwtProperties();
+        jwtProperties.setSecret(TEST_SECRET);
+        jwtProperties.setAccessTokenExpirationMs(ACCESS_TOKEN_EXPIRATION_MS);
+        jwtProperties.setRefreshTokenExpirationMs(REFRESH_TOKEN_EXPIRATION_MS);
 
-        jwtUtils = new JwtUtils(appProperties, fixedClock);
+        jwtUtils = new JwtUtils(jwtProperties, fixedClock);
     }
 
     /**
@@ -265,30 +265,30 @@ class JwtUtilsTest {
 
     @Test
     void validateConfigurationRejectsMissingOrNonPositivePolicyValues() {
-        AppProperties invalidSecret = new AppProperties();
-        invalidSecret.getJwt().setSecret("short");
-        invalidSecret.getJwt().setAccessTokenExpirationMs(1L);
-        invalidSecret.getJwt().setRefreshTokenExpirationMs(1L);
+        JwtProperties invalidSecret = new JwtProperties();
+        invalidSecret.setSecret("short");
+        invalidSecret.setAccessTokenExpirationMs(1L);
+        invalidSecret.setRefreshTokenExpirationMs(1L);
         assertThatThrownBy(() -> new JwtUtils(invalidSecret, fixedClock).validateConfiguration())
                 .isInstanceOf(IllegalStateException.class);
 
-        AppProperties missingAccess = configuredProperties();
-        missingAccess.getJwt().setAccessTokenExpirationMs(null);
+        JwtProperties missingAccess = configuredProperties();
+        missingAccess.setAccessTokenExpirationMs(null);
         assertThatThrownBy(() -> new JwtUtils(missingAccess, fixedClock).validateConfiguration())
                 .hasMessageContaining("access-token");
 
-        AppProperties zeroAccess = configuredProperties();
-        zeroAccess.getJwt().setAccessTokenExpirationMs(0L);
+        JwtProperties zeroAccess = configuredProperties();
+        zeroAccess.setAccessTokenExpirationMs(0L);
         assertThatThrownBy(() -> new JwtUtils(zeroAccess, fixedClock).validateConfiguration())
                 .hasMessageContaining("access-token");
 
-        AppProperties missingRefresh = configuredProperties();
-        missingRefresh.getJwt().setRefreshTokenExpirationMs(null);
+        JwtProperties missingRefresh = configuredProperties();
+        missingRefresh.setRefreshTokenExpirationMs(null);
         assertThatThrownBy(() -> new JwtUtils(missingRefresh, fixedClock).validateConfiguration())
                 .hasMessageContaining("refresh-token");
 
-        AppProperties zeroRefresh = configuredProperties();
-        zeroRefresh.getJwt().setRefreshTokenExpirationMs(0L);
+        JwtProperties zeroRefresh = configuredProperties();
+        zeroRefresh.setRefreshTokenExpirationMs(0L);
         assertThatThrownBy(() -> new JwtUtils(zeroRefresh, fixedClock).validateConfiguration())
                 .hasMessageContaining("refresh-token");
     }
@@ -303,11 +303,11 @@ class JwtUtilsTest {
         assertThat(jwtUtils.validateJwtToken(token)).isFalse();
     }
 
-    private AppProperties configuredProperties() {
-        AppProperties configured = new AppProperties();
-        configured.getJwt().setSecret(TEST_SECRET);
-        configured.getJwt().setAccessTokenExpirationMs(ACCESS_TOKEN_EXPIRATION_MS);
-        configured.getJwt().setRefreshTokenExpirationMs(REFRESH_TOKEN_EXPIRATION_MS);
+    private JwtProperties configuredProperties() {
+        JwtProperties configured = new JwtProperties();
+        configured.setSecret(TEST_SECRET);
+        configured.setAccessTokenExpirationMs(ACCESS_TOKEN_EXPIRATION_MS);
+        configured.setRefreshTokenExpirationMs(REFRESH_TOKEN_EXPIRATION_MS);
         return configured;
     }
 }

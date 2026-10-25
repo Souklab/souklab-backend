@@ -1,6 +1,6 @@
 package com.project.souklab.service.catalog;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.CacheProperties;
 import com.project.souklab.config.CacheConfig;
 import com.project.souklab.dao.EpoqueRepository;
 import com.project.souklab.dao.JobCategoryRepository;
@@ -49,7 +49,7 @@ import static org.mockito.Mockito.when;
  */
 @SpringJUnitConfig
 @Import({CacheConfig.class, CatalogService.class, AdminCatalogService.class})
-@EnableConfigurationProperties(AppProperties.class)
+@EnableConfigurationProperties(CacheProperties.class)
 @TestPropertySource(properties = {
         "app.cache.expire-after-write=10m",
         "app.cache.maximum-size=500"

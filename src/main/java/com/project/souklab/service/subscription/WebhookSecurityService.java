@@ -1,6 +1,6 @@
 package com.project.souklab.service.subscription;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.ChargilyProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -24,7 +24,7 @@ public class WebhookSecurityService {
     private static final int GCM_TAG_BITS = 128;
     private static final int IV_LENGTH = 12;
 
-    private final AppProperties appProperties;
+    private final ChargilyProperties chargilyProperties;
     private final SecureRandom secureRandom = new SecureRandom();
 
     public boolean isValidSignature(byte[] rawBody, String signature) {
@@ -34,7 +34,7 @@ public class WebhookSecurityService {
         String normalized = signature.startsWith("sha256=") ? signature.substring("sha256=".length()) : signature;
         try {
             Mac mac = Mac.getInstance(HMAC_ALGORITHM);
-            mac.init(new SecretKeySpec(appProperties.getChargily().getSecretKey().getBytes(StandardCharsets.UTF_8), HMAC_ALGORITHM));
+            mac.init(new SecretKeySpec(chargilyProperties.getSecretKey().getBytes(StandardCharsets.UTF_8), HMAC_ALGORITHM));
             byte[] expected = mac.doFinal(rawBody);
             byte[] supplied = hexToBytes(normalized);
             return supplied.length == expected.length && MessageDigest.isEqual(expected, supplied);
@@ -75,7 +75,7 @@ public class WebhookSecurityService {
     }
 
     private SecretKeySpec encryptionKey() {
-        byte[] key = Base64.getDecoder().decode(appProperties.getChargily().getWebhookEncryptionKey());
+        byte[] key = Base64.getDecoder().decode(chargilyProperties.getWebhookEncryptionKey());
         return new SecretKeySpec(key, "AES");
     }
 

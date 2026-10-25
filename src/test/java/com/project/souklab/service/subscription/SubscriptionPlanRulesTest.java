@@ -1,6 +1,6 @@
 package com.project.souklab.service.subscription;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.SubscriptionProperties;
 import com.project.souklab.model.BillingPeriod;
 import com.project.souklab.model.SubscriptionStatus;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,9 +19,9 @@ class SubscriptionPlanRulesTest {
 
     @BeforeEach
     void setUp() {
-        AppProperties properties = new AppProperties();
-        properties.getSubscription().setMinimumPlanAmount(100);
-        properties.getSubscription().setMaximumPlanAmount(10000);
+        SubscriptionProperties properties = new SubscriptionProperties();
+        properties.setMinimumPlanAmount(100);
+        properties.setMaximumPlanAmount(10000);
         rules = new SubscriptionPlanRules(properties, Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC));
     }
 

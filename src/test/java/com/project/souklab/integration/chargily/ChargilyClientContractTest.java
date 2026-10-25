@@ -1,6 +1,5 @@
 package com.project.souklab.integration.chargily;
 
-import com.project.souklab.config.AppProperties;
 import com.project.souklab.config.ChargilyProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -23,7 +22,7 @@ class ChargilyClientContractTest {
                 .header("Content-Type", MediaType.APPLICATION_JSON_VALUE)
                 .body("{\"id\":\"checkout-1\",\"checkout_url\":\"https://pay.example/checkout-1\"}")
                 .build());
-        AppProperties properties = properties();
+        ChargilyProperties properties = properties();
         ChargilyClient client = new ChargilyClient(WebClient.builder().exchangeFunction(exchange), properties, new ObjectMapper());
 
         ChargilyCheckoutResponse response = client.createCheckout(ChargilyCheckoutRequest.builder()
@@ -45,8 +44,8 @@ class ChargilyClientContractTest {
                 .build();
         SequencedExchangeFunction rateLimited = new SequencedExchangeFunction(List.of(
                 ClientResponse.create(HttpStatus.TOO_MANY_REQUESTS).build(), success));
-        AppProperties properties = properties();
-        properties.getChargily().setRetryCount(1);
+        ChargilyProperties properties = properties();
+        properties.setRetryCount(1);
         ChargilyClient client = new ChargilyClient(WebClient.builder().exchangeFunction(rateLimited), properties, new ObjectMapper());
 
         client.createCheckout(request());
@@ -67,9 +66,8 @@ class ChargilyClientContractTest {
                 .metadata(Map.of("payment_id", "payment-1")).build();
     }
 
-    private AppProperties properties() {
-        AppProperties properties = new AppProperties();
-        ChargilyProperties chargily = properties.getChargily();
+    private ChargilyProperties properties() {
+        ChargilyProperties chargily = new ChargilyProperties();
         chargily.setSecretKey("secret");
         chargily.setBaseUrl("https://pay.example/api/v2");
         chargily.setConnectTimeout(Duration.ofSeconds(1));
@@ -77,6 +75,6 @@ class ChargilyClientContractTest {
         chargily.setResponseTimeout(Duration.ofSeconds(1));
         chargily.setRetryBackoff(Duration.ofMillis(1));
         chargily.setRetryCount(0);
-        return properties;
+        return chargily;
     }
 }

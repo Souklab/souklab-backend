@@ -9,8 +9,8 @@ import com.project.souklab.exception.BadRequestException;
 import com.project.souklab.exception.ResourceNotFoundException;
 import com.project.souklab.filestorage.StorageResult;
 import com.project.souklab.filestorage.validation.ValidatedFile;
-
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.AppStorageProperties;
+import com.project.souklab.config.ChatProperties;
 import com.project.souklab.dao.*;
 import com.project.souklab.dto.chat.*;
 import com.project.souklab.exception.ForbiddenException;
@@ -65,7 +65,8 @@ class ConversationServiceTest {
     private User sender;
     private User recipient;
     private Conversation conversation;
-    private AppProperties properties;
+    private ChatProperties chatProperties;
+    private AppStorageProperties storageProperties;
 
     @BeforeEach
     void setUp() {
@@ -75,10 +76,11 @@ class ConversationServiceTest {
         ConversationParticipant first = participant(sender); ConversationParticipant second = participant(recipient);
         conversation.addParticipant(first); conversation.addParticipant(second);
         when(currentUserProvider.requireCurrentUser()).thenReturn(sender);
-        properties = new AppProperties();
-        properties.getStorage().setFileServingPrefix("/api/v1/files/");
-        properties.getChat().setMessageMaxLength(4000); properties.getChat().setAttachmentMaxCount(5); properties.getChat().setCursorLifetime(Duration.ofHours(24)); properties.getChat().setTypingEventInterval(Duration.ofMillis(500)); properties.getChat().setDefaultPageSize(50); properties.getChat().setMinPageSize(1); properties.getChat().setMaxPageSize(100); properties.getChat().setWebsocketProtocolVersion("v1"); properties.getChat().setEventDestination("/queue/chat/events"); properties.getChat().setMessageDestinationPrefix("/queue/chat");
-        service = new ConversationService(conversationRepository, participantRepository, messageRepository, uploadRepository, userRepository, currentUserProvider, notificationService, messagingTemplate, properties, clock, storageService, fileValidator);
+        storageProperties = new AppStorageProperties();
+        storageProperties.setFileServingPrefix("/api/v1/files/");
+        chatProperties = new ChatProperties();
+        chatProperties.setMessageMaxLength(4000); chatProperties.setAttachmentMaxCount(5); chatProperties.setCursorLifetime(Duration.ofHours(24)); chatProperties.setTypingEventInterval(Duration.ofMillis(500)); chatProperties.setDefaultPageSize(50); chatProperties.setMinPageSize(1); chatProperties.setMaxPageSize(100); chatProperties.setWebsocketProtocolVersion("v1"); chatProperties.setEventDestination("/queue/chat/events"); chatProperties.setMessageDestinationPrefix("/queue/chat");
+        service = new ConversationService(conversationRepository, participantRepository, messageRepository, uploadRepository, userRepository, currentUserProvider, notificationService, messagingTemplate, chatProperties, storageProperties, clock, storageService, fileValidator);
     }
 
     @Test
@@ -552,7 +554,7 @@ class ConversationServiceTest {
     void typing_afterThrottleIntervalPublishesAgain() {
         when(conversationRepository.findById("conversation")).thenReturn(Optional.of(conversation));
         when(participantRepository.existsByConversationAndUser(conversation, sender)).thenReturn(true);
-        properties.getChat().setTypingEventInterval(Duration.ZERO);
+        chatProperties.setTypingEventInterval(Duration.ZERO);
         service.typing("conversation", true, "first");
         service.typing("conversation", true, "second");
         verify(messagingTemplate, times(2)).convertAndSendToUser(eq(recipient.getEmail()), eq("/queue/chat"), any());
