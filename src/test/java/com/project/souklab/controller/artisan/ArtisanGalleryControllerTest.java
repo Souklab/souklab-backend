@@ -1,5 +1,4 @@
 package com.project.souklab.controller.artisan;
-import com.project.souklab.controller.support.SecurityTestUtils;
 
 import com.project.souklab.controller.support.ControllerSliceTest;
 import com.project.souklab.dto.artisan.GalleryImageResponseDTO;

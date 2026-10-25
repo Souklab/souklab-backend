@@ -1,6 +1,5 @@
 package com.project.souklab.service.feed;
 
-import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,7 +32,6 @@ import com.project.souklab.filestorage.scan.VirusScanService;
 import com.project.souklab.filestorage.validation.FileValidator;
 import com.project.souklab.filestorage.validation.ValidatedFile;
 import com.project.souklab.model.AccountStatus;
-import com.project.souklab.model.Artisan;
 import com.project.souklab.model.FeedPost;
 import com.project.souklab.model.FeedPostMedia;
 import com.project.souklab.model.FeedPostStatus;

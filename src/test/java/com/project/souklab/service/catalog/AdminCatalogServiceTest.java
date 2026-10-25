@@ -21,7 +21,6 @@ import com.project.souklab.dto.catalog.admin.MaterialFamilyRequest;
 import com.project.souklab.dto.catalog.admin.MaterialRequest;
 import com.project.souklab.dto.catalog.admin.RegionRequest;
 import com.project.souklab.dto.catalog.admin.TechniqueRequest;
-import com.project.souklab.exception.BadRequestException;
 import com.project.souklab.exception.ConflictException;
 import com.project.souklab.exception.ResourceNotFoundException;
 import com.project.souklab.exception.UnprocessableEntityException;

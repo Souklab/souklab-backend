@@ -1,7 +1,6 @@
 package com.project.souklab.service.chat;
 
 import java.io.IOException;
-import java.util.Locale;
 import java.util.Objects;
 import org.springframework.beans.factory.annotation.Autowired;
 

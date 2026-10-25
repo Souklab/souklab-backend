@@ -33,7 +33,6 @@ import com.project.souklab.model.ReviewStatus;
 import com.project.souklab.model.User;
 import com.project.souklab.service.notification.NotificationService;
 import com.project.souklab.security.AccessControlService;
-import com.project.souklab.model.NotificationType;
 import com.project.souklab.dao.OAuthIdentityRepository;
 import com.project.souklab.service.security.RefreshTokenService;
 import com.project.souklab.util.SecurityUtils;

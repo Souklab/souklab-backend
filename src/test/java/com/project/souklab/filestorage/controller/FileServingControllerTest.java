@@ -1,5 +1,4 @@
 package com.project.souklab.filestorage.controller;
-import com.project.souklab.controller.support.SecurityTestUtils;
 
 import com.project.souklab.controller.support.ControllerSliceTest;
 import com.project.souklab.filestorage.StorageResource;

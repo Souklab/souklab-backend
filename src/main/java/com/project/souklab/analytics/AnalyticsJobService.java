@@ -51,7 +51,6 @@ import com.project.souklab.model.analytics.AnalyticsBucket;
 import com.project.souklab.model.analytics.AnalyticsReportType;
 import com.project.souklab.model.analytics.AnalyticsFilterKey;
 import com.project.souklab.model.analytics.AnalyticsOutputFormat;
-import com.project.souklab.model.analytics.AnalyticsOutboxEvent;
 import com.project.souklab.model.analytics.OutboxStatus;
 import com.project.souklab.dto.analytics.AnalyticsJobEvent;
 import com.project.souklab.model.FeedPostStatus;

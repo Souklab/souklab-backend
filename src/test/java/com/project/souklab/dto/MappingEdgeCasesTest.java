@@ -13,8 +13,6 @@ import com.project.souklab.dto.catalog.MaterialFamilyDTO;
 import com.project.souklab.dto.catalog.RegionDTO;
 import com.project.souklab.dto.catalog.TechniqueDTO;
 import com.project.souklab.dto.catalog.TechniqueSummaryDTO;
-import com.project.souklab.model.ArtisanCertification;
-import com.project.souklab.model.ArtisanGalleryImage;
 import com.project.souklab.model.Epoque;
 import com.project.souklab.model.JobCategory;
 import com.project.souklab.model.JobSubCategory;
