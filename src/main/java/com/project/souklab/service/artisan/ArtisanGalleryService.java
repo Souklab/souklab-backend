@@ -1,6 +1,7 @@
 package com.project.souklab.service.artisan;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.AppStorageProperties;
+import com.project.souklab.config.ArtisanProperties;
 import com.project.souklab.dao.ArtisanGalleryImageRepository;
 import com.project.souklab.dao.ArtisanRepository;
 import com.project.souklab.dto.artisan.GalleryImageResponseDTO;
@@ -52,7 +53,8 @@ public class ArtisanGalleryService {
     private final FileUrlResolver fileUrlResolver;
     private final FileValidator fileValidator;
     private final VirusScanService virusScanService;
-    private final AppProperties appProperties;
+    private final ArtisanProperties artisanProperties;
+    private final AppStorageProperties appStorageProperties;
     private final Clock clock;
 
 
@@ -75,7 +77,7 @@ public class ArtisanGalleryService {
         Artisan artisan = resolveAuthenticatedArtisan();
         artisan = artisanRepository.findWithLockById(artisan.getId()).orElse(artisan);
 
-        int maxImages = appProperties.getArtisan().getGallery().getMaxImages();
+        int maxImages = artisanProperties.getGallery().getMaxImages();
         long activeCount = galleryImageRepository.countByArtisanIdAndDeletedAtIsNull(artisan.getId());
         if (activeCount >= maxImages) {
             throw new BadRequestException("Gallery quota exceeded. Maximum " + maxImages + " images allowed.");
@@ -139,7 +141,7 @@ public class ArtisanGalleryService {
                 ValidatedFile validated = virusScanService.scan(validateAndSanitizeFile(file));
                 StorageResult stored = storageService.store(validated.content(), validated.sanitizedFilename(), validated.detectedMimeType(), validated.size());
                 newStorageKey = stored.key();
-                image.setImageUrl(appProperties.getStorage().toUrl(newStorageKey));
+                image.setImageUrl(appStorageProperties.toUrl(newStorageKey));
             }
             GalleryImageResponseDTO response = GalleryImageResponseDTO.from(galleryImageRepository.save(image));
             if (newStorageKey != null) {
@@ -210,7 +212,7 @@ public class ArtisanGalleryService {
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("Image file is required and cannot be empty.");
         }
-        long maxFileSizeBytes = appProperties.getArtisan().getGallery().getMaxFileSize().toBytes();
+        long maxFileSizeBytes = artisanProperties.getGallery().getMaxFileSize().toBytes();
         if (file.getSize() > maxFileSizeBytes) {
             throw new FileTooLargeException(file.getSize(), maxFileSizeBytes);
         }
@@ -229,7 +231,7 @@ public class ArtisanGalleryService {
                     file.getOriginalFilename(),
                     file.getContentType(),
                     file.getSize(),
-                    appProperties.getArtisan().getGallery().getAllowedMimeTypes()
+                    artisanProperties.getGallery().getAllowedMimeTypes()
             );
         } catch (IOException e) {
             log.error("Failed to read gallery image upload stream", e);
@@ -266,7 +268,7 @@ public class ArtisanGalleryService {
 
             ArtisanGalleryImage galleryImage = ArtisanGalleryImage.builder()
                     .artisan(artisan)
-                    .imageUrl(appProperties.getStorage().toUrl(storageKey))
+                    .imageUrl(appStorageProperties.toUrl(storageKey))
                     .title(title)
                     .caption(caption)
                     .displayOrder(displayOrder)

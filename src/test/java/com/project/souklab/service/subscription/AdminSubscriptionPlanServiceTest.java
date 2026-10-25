@@ -1,6 +1,5 @@
 package com.project.souklab.service.subscription;
 
-import com.project.souklab.config.AppProperties;
 import com.project.souklab.config.SubscriptionProperties;
 import com.project.souklab.dao.SubscriptionPlanRepository;
 import com.project.souklab.dto.subscription.FinancialReasonRequest;
@@ -49,27 +48,25 @@ class AdminSubscriptionPlanServiceTest {
     @Mock
     private AuditLogService auditLogService;
 
-    private AppProperties appProperties;
+    private SubscriptionProperties subscriptionProperties;
     private SubscriptionPlanRules rules;
     private AdminSubscriptionPlanService service;
     private User adminUser;
 
     @BeforeEach
     void setUp() {
-        appProperties = new AppProperties();
-        SubscriptionProperties subProps = new SubscriptionProperties();
-        subProps.setCurrency("DZD");
-        subProps.setMinimumPlanAmount(500);
-        subProps.setMaximumPlanAmount(50000);
-        appProperties.setSubscription(subProps);
+        subscriptionProperties = new SubscriptionProperties();
+        subscriptionProperties.setCurrency("DZD");
+        subscriptionProperties.setMinimumPlanAmount(500);
+        subscriptionProperties.setMaximumPlanAmount(50000);
 
         Clock clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
-        rules = new SubscriptionPlanRules(appProperties, clock);
+        rules = new SubscriptionPlanRules(subscriptionProperties, clock);
 
         adminUser = new User();
         adminUser.setId("admin-1");
 
-        service = new AdminSubscriptionPlanService(planRepository, rules, appProperties, currentUserProvider, auditLogService);
+        service = new AdminSubscriptionPlanService(planRepository, rules, subscriptionProperties, currentUserProvider, auditLogService);
     }
 
     @Test

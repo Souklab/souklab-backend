@@ -1,6 +1,5 @@
 package com.project.souklab.service.subscription;
 
-import com.project.souklab.config.AppProperties;
 import com.project.souklab.config.SubscriptionProperties;
 import com.project.souklab.model.BillingPeriod;
 import com.project.souklab.model.CurrencyCode;
@@ -15,13 +14,12 @@ import java.time.LocalDateTime;
 @Service
 @RequiredArgsConstructor
 public class SubscriptionPlanRules {
-    private final AppProperties appProperties;
+    private final SubscriptionProperties subscriptionProperties;
     private final Clock clock;
 
     public void validateDzdAmount(long amount) {
-        SubscriptionProperties subscription = appProperties.getSubscription();
-        if (amount <= 0 || amount < subscription.getMinimumPlanAmount()
-                || amount > subscription.getMaximumPlanAmount()) {
+        if (amount <= 0 || amount < subscriptionProperties.getMinimumPlanAmount()
+                || amount > subscriptionProperties.getMaximumPlanAmount()) {
             throw new IllegalArgumentException("Plan amount must be a positive DZD amount within configured bounds");
         }
     }

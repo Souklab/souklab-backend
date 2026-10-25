@@ -14,30 +14,31 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final WebSocketAuthInterceptor webSocketAuthInterceptor;
-    private final AppProperties appProperties;
+    private final ChatProperties chatProperties;
+    private final CorsProperties corsProperties;
+    private final RelayProperties relayProperties;
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint(appProperties.getChat().getWebsocketEndpoint())
-                .setAllowedOriginPatterns(appProperties.getCors().getAllowedOrigins().toArray(String[]::new))
+        registry.addEndpoint(chatProperties.getWebsocketEndpoint())
+                .setAllowedOriginPatterns(corsProperties.getAllowedOrigins().toArray(String[]::new))
                 .withSockJS();
     }
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        AppProperties.Relay relay = appProperties.getRelay();
-        registry.enableStompBrokerRelay(appProperties.getChat().getBrokerDestinationPrefixes().split(","))
-                .setRelayHost(relay.getHost())
-                .setRelayPort(relay.getPort())
-                .setClientLogin(relay.getClientLogin())
-                .setClientPasscode(relay.getClientPasscode())
-                .setSystemLogin(relay.getSystemLogin())
-                .setSystemPasscode(relay.getSystemPasscode())
-                .setUserDestinationBroadcast(appProperties.getChat().getUnresolvedUserDestination())
-                .setUserRegistryBroadcast(appProperties.getChat().getUserRegistryBroadcast());
+        registry.enableStompBrokerRelay(chatProperties.getBrokerDestinationPrefixes().split(","))
+                .setRelayHost(relayProperties.getHost())
+                .setRelayPort(relayProperties.getPort())
+                .setClientLogin(relayProperties.getClientLogin())
+                .setClientPasscode(relayProperties.getClientPasscode())
+                .setSystemLogin(relayProperties.getSystemLogin())
+                .setSystemPasscode(relayProperties.getSystemPasscode())
+                .setUserDestinationBroadcast(chatProperties.getUnresolvedUserDestination())
+                .setUserRegistryBroadcast(chatProperties.getUserRegistryBroadcast());
 
-        registry.setApplicationDestinationPrefixes(appProperties.getChat().getApplicationDestinationPrefix());
-        registry.setUserDestinationPrefix(appProperties.getChat().getUserDestinationPrefix());
+        registry.setApplicationDestinationPrefixes(chatProperties.getApplicationDestinationPrefix());
+        registry.setUserDestinationPrefix(chatProperties.getUserDestinationPrefix());
     }
 
     @Override

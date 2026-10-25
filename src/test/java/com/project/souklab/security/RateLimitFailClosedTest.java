@@ -1,7 +1,7 @@
 package com.project.souklab.security;
 
-import com.project.souklab.config.AppProperties;
 import com.project.souklab.config.AvatarProperties;
+import com.project.souklab.config.RateLimitProperties;
 import com.project.souklab.filestorage.config.StorageProperties;
 import com.project.souklab.filestorage.security.FileRateLimitFilter;
 import com.project.souklab.util.ServletResponseUtil;
@@ -24,10 +24,10 @@ class RateLimitFailClosedTest {
 
     @Test
     void globalLimiterReturns429WhenSharedStoreIsUnavailable() throws Exception {
-        AppProperties properties = new AppProperties();
-        properties.getRateLimit().setEnabled(true);
-        properties.getRateLimit().setCapacity(1);
-        properties.getRateLimit().setRefillDuration(Duration.ofMinutes(1));
+        RateLimitProperties properties = new RateLimitProperties();
+        properties.setEnabled(true);
+        properties.setCapacity(1);
+        properties.setRefillDuration(Duration.ofMinutes(1));
         RateLimitFilter filter = new RateLimitFilter(responses, properties, unavailable);
 
         MockHttpServletResponse response = new MockHttpServletResponse();

@@ -8,8 +8,9 @@ import org.mockito.Answers;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.DirectoryProperties;
 import com.project.souklab.config.OperationalMetrics;
+import com.project.souklab.config.SearchProperties;
 import com.project.souklab.dao.ArtisanRepository;
 import com.project.souklab.dto.common.PaginatedResponse;
 import com.project.souklab.dto.directory.ArtisanDirectoryCardDTO;
@@ -99,7 +100,9 @@ class DirectorySearchServiceTest {
     private ArtisanRepository artisanRepository;
 
     @Mock
-    private AppProperties appProperties;
+    private SearchProperties searchProperties;
+
+    private DirectoryProperties directoryProperties;
 
     @Mock
     private ViewerPremiumResolver viewerPremiumResolver;
@@ -108,14 +111,13 @@ class DirectorySearchServiceTest {
 
     @BeforeEach
     void setUp() {
+        directoryProperties = new DirectoryProperties();
+        directoryProperties.setDefaultPageIndex(0);
+        directoryProperties.setDefaultPageSize(20);
+        directoryProperties.setMinPageSize(1);
+        directoryProperties.setMaxPageSize(100);
         directorySearchService = new DirectorySearchServiceImpl(
-                entityManager, artisanRepository, appProperties, OperationalMetrics.noop(), viewerPremiumResolver);
-        AppProperties.Directory directory = new AppProperties.Directory();
-        directory.setDefaultPageIndex(0);
-        directory.setDefaultPageSize(20);
-        directory.setMinPageSize(1);
-        directory.setMaxPageSize(100);
-        Mockito.lenient().when(appProperties.getDirectory()).thenReturn(directory);
+                entityManager, artisanRepository, searchProperties, directoryProperties, OperationalMetrics.noop(), viewerPremiumResolver);
     }
 
     /**
@@ -125,9 +127,7 @@ class DirectorySearchServiceTest {
     @DisplayName("search: when Hibernate Search is disabled, routes directly to relational JPA fallback")
     @SuppressWarnings("unchecked")
     void search_whenSearchDisabled_shouldFallbackToRelationalSpecification() {
-        AppProperties.Search searchConfig = new AppProperties.Search();
-        searchConfig.setEnabled(false);
-        when(appProperties.getSearch()).thenReturn(searchConfig);
+        when(searchProperties.isEnabled()).thenReturn(false);
 
         Artisan sampleArtisan = createSampleArtisan();
         when(artisanRepository.findAll(any(Specification.class), any(Pageable.class)))
@@ -157,9 +157,7 @@ class DirectorySearchServiceTest {
     @DisplayName("search: when Hibernate Search throws an exception, catches and seamlessly falls back to JPA")
     @SuppressWarnings("unchecked")
     void search_whenHibernateSearchThrowsException_shouldFallbackToRelationalSpecification() {
-        AppProperties.Search searchConfig = new AppProperties.Search();
-        searchConfig.setEnabled(true);
-        when(appProperties.getSearch()).thenReturn(searchConfig);
+        when(searchProperties.isEnabled()).thenReturn(true);
 
         Artisan sampleArtisan = createSampleArtisan();
         when(artisanRepository.findAll(any(Specification.class), any(Pageable.class)))
@@ -189,9 +187,7 @@ class DirectorySearchServiceTest {
     @DisplayName("search: when Hibernate Search succeeds, returns mapped PaginatedResponse")
     @SuppressWarnings({"rawtypes", "unchecked"})
     void search_whenHibernateSearchSucceeds_shouldReturnDirectoryCards() {
-        AppProperties.Search searchConfig = new AppProperties.Search();
-        searchConfig.setEnabled(true);
-        when(appProperties.getSearch()).thenReturn(searchConfig);
+        when(searchProperties.isEnabled()).thenReturn(true);
 
         Artisan sampleArtisan = createSampleArtisan();
 
@@ -542,9 +538,7 @@ class DirectorySearchServiceTest {
     @DisplayName("searchRelationalFallback: non-premium viewer receives masked artisan names")
     @SuppressWarnings("unchecked")
     void searchRelationalFallback_whenContactInfoLocked_masksArtisanName() {
-        AppProperties.Search searchConfig = new AppProperties.Search();
-        searchConfig.setEnabled(false);
-        when(appProperties.getSearch()).thenReturn(searchConfig);
+        when(searchProperties.isEnabled()).thenReturn(false);
         when(viewerPremiumResolver.isContactInfoLocked()).thenReturn(true);
 
         Artisan artisan = createSampleArtisan();
@@ -568,9 +562,7 @@ class DirectorySearchServiceTest {
     @DisplayName("searchRelationalFallback: premium viewer receives real artisan names")
     @SuppressWarnings("unchecked")
     void searchRelationalFallback_whenContactInfoUnlocked_exposesRealArtisanName() {
-        AppProperties.Search searchConfig = new AppProperties.Search();
-        searchConfig.setEnabled(false);
-        when(appProperties.getSearch()).thenReturn(searchConfig);
+        when(searchProperties.isEnabled()).thenReturn(false);
         when(viewerPremiumResolver.isContactInfoLocked()).thenReturn(false);
 
         Artisan artisan = createSampleArtisan();

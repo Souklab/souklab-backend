@@ -2,7 +2,7 @@ package com.project.souklab.integration.chargily;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.ChargilyProperties;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,19 +25,19 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ChargilyWireMockContractTest {
     private WireMockServer server;
-    private AppProperties properties;
+    private ChargilyProperties properties;
 
     @BeforeEach
     void setUp() {
         server = new WireMockServer(0);
         server.start();
-        properties = new AppProperties();
-        properties.getChargily().setSecretKey("test-secret");
-        properties.getChargily().setBaseUrl(server.baseUrl());
-        properties.getChargily().setConnectTimeout(Duration.ofSeconds(2));
-        properties.getChargily().setReadTimeout(Duration.ofSeconds(2));
-        properties.getChargily().setResponseTimeout(Duration.ofSeconds(2));
-        properties.getChargily().setRetryBackoff(Duration.ofMillis(1));
+        properties = new ChargilyProperties();
+        properties.setSecretKey("test-secret");
+        properties.setBaseUrl(server.baseUrl());
+        properties.setConnectTimeout(Duration.ofSeconds(2));
+        properties.setReadTimeout(Duration.ofSeconds(2));
+        properties.setResponseTimeout(Duration.ofSeconds(2));
+        properties.setRetryBackoff(Duration.ofMillis(1));
     }
 
     @AfterEach
@@ -126,8 +126,8 @@ class ChargilyWireMockContractTest {
 
     @Test
     void convertsProviderTimeoutToSanitizedException() {
-        properties.getChargily().setResponseTimeout(Duration.ofMillis(50));
-        properties.getChargily().setReadTimeout(Duration.ofMillis(50));
+        properties.setResponseTimeout(Duration.ofMillis(50));
+        properties.setReadTimeout(Duration.ofMillis(50));
         server.stubFor(post(urlEqualTo("/checkouts"))
                 .willReturn(aResponse().withStatus(200).withFixedDelay(250)
                         .withBody("{\"id\":\"late\",\"checkout_url\":\"https://pay.example/late\"}")));
@@ -138,7 +138,7 @@ class ChargilyWireMockContractTest {
     }
 
     private ChargilyClient client(int retryCount) {
-        properties.getChargily().setRetryCount(retryCount);
+        properties.setRetryCount(retryCount);
         return new ChargilyClient(WebClient.builder(), properties, new ObjectMapper());
     }
 

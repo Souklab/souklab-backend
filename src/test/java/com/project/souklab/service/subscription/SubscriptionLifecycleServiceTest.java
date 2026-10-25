@@ -1,6 +1,6 @@
 package com.project.souklab.service.subscription;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.SubscriptionProperties;
 import com.project.souklab.dao.ArtisanSubscriptionRepository;
 import com.project.souklab.dao.ClientSubscriptionRepository;
 import com.project.souklab.dao.PaymentRepository;
@@ -29,13 +29,13 @@ import static org.mockito.Mockito.when;
 class SubscriptionLifecycleServiceTest {
     @Test
     void expiresStalePendingPaymentAndItsPendingSubscription() {
-        AppProperties properties = new AppProperties();
-        properties.getSubscription().setLifecycleInterval(Duration.ofHours(1));
-        properties.getSubscription().setLifecycleBatchSize(10);
-        properties.getSubscription().setCheckoutIdempotencyRetention(Duration.ofHours(24));
-        properties.getSubscription().setWebhookRetention(Duration.ofDays(90));
-        properties.getSubscription().setReminderOffsets(List.of(7L, 1L));
-        properties.getSubscription().setLifecycleTimeZone("UTC");
+        SubscriptionProperties properties = new SubscriptionProperties();
+        properties.setLifecycleInterval(Duration.ofHours(1));
+        properties.setLifecycleBatchSize(10);
+        properties.setCheckoutIdempotencyRetention(Duration.ofHours(24));
+        properties.setWebhookRetention(Duration.ofDays(90));
+        properties.setReminderOffsets(List.of(7L, 1L));
+        properties.setLifecycleTimeZone("UTC");
 
         Payment payment = new Payment();
         payment.setId("payment-1");

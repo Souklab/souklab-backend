@@ -3,7 +3,7 @@ package com.project.souklab.security;
 import com.project.souklab.dto.auth.JwtResponseDTO;
 import com.project.souklab.dto.common.ApiResponse;
 import com.project.souklab.exception.AppException;
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.OAuthProperties;
 import com.project.souklab.service.auth.AuthService;
 import com.project.souklab.util.ServletResponseUtil;
 import jakarta.servlet.http.Cookie;
@@ -31,7 +31,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     private final AuthService authService;
     private final ServletResponseUtil servletResponseUtil;
     private final AuthorizationCodeStore authorizationCodeStore;
-    private final AppProperties appProperties;
+    private final OAuthProperties oAuthProperties;
 
     public OAuth2AuthenticationSuccessHandler(AuthService authService, ServletResponseUtil servletResponseUtil) {
         this(authService, servletResponseUtil, null, null);
@@ -45,11 +45,11 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     @Autowired
     public OAuth2AuthenticationSuccessHandler(AuthService authService, ServletResponseUtil servletResponseUtil,
                                                AuthorizationCodeStore authorizationCodeStore,
-                                               AppProperties appProperties) {
+                                               OAuthProperties oAuthProperties) {
         this.authService = authService;
         this.servletResponseUtil = servletResponseUtil;
         this.authorizationCodeStore = authorizationCodeStore;
-        this.appProperties = appProperties;
+        this.oAuthProperties = oAuthProperties;
     }
 
     @Override
@@ -102,11 +102,10 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
     String resolveAuthorizedRedirectUri(HttpServletRequest request) {
         String configured = null;
-        if (appProperties != null && appProperties.getOauth() != null
-                && appProperties.getOauth().getGoogle() != null
-                && appProperties.getOauth().getGoogle().getAuthorizedRedirectUri() != null
-                && !appProperties.getOauth().getGoogle().getAuthorizedRedirectUri().isBlank()) {
-            configured = appProperties.getOauth().getGoogle().getAuthorizedRedirectUri().trim();
+        if (oAuthProperties != null && oAuthProperties.getGoogle() != null
+                && oAuthProperties.getGoogle().getAuthorizedRedirectUri() != null
+                && !oAuthProperties.getGoogle().getAuthorizedRedirectUri().isBlank()) {
+            configured = oAuthProperties.getGoogle().getAuthorizedRedirectUri().trim();
         }
         if (configured == null) {
             configured = "http://localhost/connexion/google";

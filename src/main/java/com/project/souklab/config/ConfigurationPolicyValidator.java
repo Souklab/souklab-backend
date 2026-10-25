@@ -3,7 +3,6 @@ package com.project.souklab.config;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import com.project.souklab.config.AvatarProperties.RateLimitProperties;
 import com.project.souklab.filestorage.config.StorageProperties;
 import com.project.souklab.model.CurrencyCode;
 import jakarta.annotation.PostConstruct;
@@ -21,7 +20,18 @@ import java.util.Base64;
 @RequiredArgsConstructor
 public class ConfigurationPolicyValidator {
 
-    private final AppProperties appProperties;
+    private final RateLimitProperties rateLimitProperties;
+    private final AppStorageProperties appStorageProperties;
+    private final CorsProperties corsProperties;
+    private final AsyncProperties asyncProperties;
+    private final CacheProperties cacheProperties;
+    private final SearchProperties searchProperties;
+    private final DirectoryProperties directoryProperties;
+    private final FavoritesProperties favoritesProperties;
+    private final SubscriptionProperties subscriptionProperties;
+    private final ChargilyProperties chargilyProperties;
+    private final MailerSendProperties mailerSendProperties;
+    private final RelayProperties relayProperties;
     private final AvatarProperties avatarProperties;
     private final StorageProperties storageProperties;
     private final Environment environment;
@@ -63,16 +73,15 @@ public class ConfigurationPolicyValidator {
         requirePositive("avatar.max-per-user", avatarProperties.getMaxPerUser());
         requireNonEmpty("avatar.allowed-mime-types", avatarProperties.getAllowedMimeTypes());
         validateRateLimit("avatar.rate-limit", avatarProperties.getRateLimit());
-        AppProperties.RateLimit globalRateLimit = appProperties.getRateLimit();
-        if (globalRateLimit.isEnabled()) {
-            requirePositive("app.rate-limit.capacity", globalRateLimit.getCapacity());
-            validatePositiveDuration("app.rate-limit.refill-duration", globalRateLimit.getRefillDuration());
+        if (rateLimitProperties.isEnabled()) {
+            requirePositive("app.rate-limit.capacity", rateLimitProperties.getCapacity());
+            validatePositiveDuration("app.rate-limit.refill-duration", rateLimitProperties.getRefillDuration());
         }
-        if (appProperties.getRateLimit().isUserEnabled()) {
-            if (appProperties.getRateLimit().getUserCapacity() <= 0
-                    || appProperties.getRateLimit().getUserRefillDuration() == null
-                    || appProperties.getRateLimit().getUserRefillDuration().isZero()
-                    || appProperties.getRateLimit().getUserRefillDuration().isNegative()) {
+        if (rateLimitProperties.isUserEnabled()) {
+            if (rateLimitProperties.getUserCapacity() <= 0
+                    || rateLimitProperties.getUserRefillDuration() == null
+                    || rateLimitProperties.getUserRefillDuration().isZero()
+                    || rateLimitProperties.getUserRefillDuration().isNegative()) {
                 throw new IllegalStateException("app.rate-limit user policy is invalid");
             }
         }
@@ -83,13 +92,13 @@ public class ConfigurationPolicyValidator {
             throw new IllegalStateException("storage.validation.max-file-size must be positive");
         }
         requireNonEmpty("storage.validation.allowed-mime-types", validation.getAllowedMimeTypes());
-        requireConfigured("app.storage.file-serving-prefix", appProperties.getStorage().getFileServingPrefix());
-        validateCors(appProperties.getCors().getAllowedOrigins());
-        validateAsync(appProperties.getAsync());
-        validateCache(appProperties.getCache());
-        validateMassIndexing(appProperties.getSearch().getMassIndexing());
-        validateDirectory(appProperties.getDirectory());
-        requirePositive("app.favorites.max-per-client", appProperties.getFavorites().getMaxPerClient());
+        requireConfigured("app.storage.file-serving-prefix", appStorageProperties.getFileServingPrefix());
+        validateCors(corsProperties.getAllowedOrigins());
+        validateAsync(asyncProperties);
+        validateCache(cacheProperties);
+        validateMassIndexing(searchProperties.getMassIndexing());
+        validateDirectory(directoryProperties);
+        requirePositive("app.favorites.max-per-client", favoritesProperties.getMaxPerClient());
         validateSubscriptionPolicy();
         validateAnalyticsPolicy();
         if (healthProperties != null) {
@@ -208,8 +217,8 @@ public class ConfigurationPolicyValidator {
     }
 
     private void validateSubscriptionPolicy() {
-        SubscriptionProperties subscription = appProperties.getSubscription();
-        ChargilyProperties chargily = appProperties.getChargily();
+        SubscriptionProperties subscription = subscriptionProperties;
+        ChargilyProperties chargily = chargilyProperties;
         if (chargily != null && chargily.isEnabled()) {
             validateChargily(chargily);
         }
@@ -308,8 +317,8 @@ public class ConfigurationPolicyValidator {
         requireExactValue("management.endpoint.health.show-details", environment.getProperty("management.endpoint.health.show-details"), "when-authorized");
         requireExactValue("management.endpoints.web.exposure.include", environment.getProperty("management.endpoints.web.exposure.include"), "health,info,prometheus");
         requireExactValue("management.info.env.enabled", environment.getProperty("management.info.env.enabled"), "false");
-        validatePositiveDuration("app.mailersend.connection-timeout", appProperties.getMailersend().getConnectionTimeout());
-        validatePositiveDuration("app.mailersend.read-timeout", appProperties.getMailersend().getReadTimeout());
+        validatePositiveDuration("app.mailersend.connection-timeout", mailerSendProperties.getConnectionTimeout());
+        validatePositiveDuration("app.mailersend.read-timeout", mailerSendProperties.getReadTimeout());
         requireExactValue("storage.provider", environment.getProperty("storage.provider"), "s3");
         requireExactValue("storage.virus-scan.enabled", environment.getProperty("storage.virus-scan.enabled"), "true");
         requireExactValue("storage.virus-scan.fail-open", environment.getProperty("storage.virus-scan.fail-open"), "false");
@@ -320,17 +329,17 @@ public class ConfigurationPolicyValidator {
         requirePositiveProperty("app.rate-limit.redis.connection-timeout");
         requirePositiveProperty("app.rate-limit.redis.command-timeout");
         requireExactValue("app.search.enabled", environment.getProperty("app.search.enabled"), "true");
-        if (appProperties.getSearch().isSchemaBootstrapEnabled()) {
-            requireExactValue("app.search.schema-management", appProperties.getSearch().getSchemaManagement(), "create-or-update");
+        if (searchProperties.isSchemaBootstrapEnabled()) {
+            requireExactValue("app.search.schema-management", searchProperties.getSchemaManagement(), "create-or-update");
         } else {
-            requireExactValue("app.search.schema-management", appProperties.getSearch().getSchemaManagement(), "validate");
+            requireExactValue("app.search.schema-management", searchProperties.getSchemaManagement(), "validate");
         }
-        requireConfigured("app.search.uris", appProperties.getSearch().getUris());
-        requireConfigured("app.relay.host", appProperties.getRelay().getHost());
-        requireConfigured("app.relay.client-login", appProperties.getRelay().getClientLogin());
-        requireConfigured("app.relay.client-passcode", appProperties.getRelay().getClientPasscode());
-        requireConfigured("app.relay.system-login", appProperties.getRelay().getSystemLogin());
-        requireConfigured("app.relay.system-passcode", appProperties.getRelay().getSystemPasscode());
+        requireConfigured("app.search.uris", searchProperties.getUris());
+        requireConfigured("app.relay.host", relayProperties.getHost());
+        requireConfigured("app.relay.client-login", relayProperties.getClientLogin());
+        requireConfigured("app.relay.client-passcode", relayProperties.getClientPasscode());
+        requireConfigured("app.relay.system-login", relayProperties.getSystemLogin());
+        requireConfigured("app.relay.system-passcode", relayProperties.getSystemPasscode());
     }
 
     private void requireExactValue(String name, String actual, String expected) {
@@ -339,7 +348,7 @@ public class ConfigurationPolicyValidator {
         }
     }
 
-    private void validateRateLimit(String prefix, RateLimitProperties properties) {
+    private void validateRateLimit(String prefix, AvatarProperties.RateLimitProperties properties) {
         if (properties == null || !properties.isEnabled()) {
             return;
         }
@@ -361,7 +370,7 @@ public class ConfigurationPolicyValidator {
         return environment.matchesProfiles("prod", "production");
     }
 
-    private void validateAsync(AppProperties.Async async) {
+    private void validateAsync(AsyncProperties async) {
         if (async == null) {
             throw new IllegalStateException("app.async must be configured");
         }
@@ -369,7 +378,7 @@ public class ConfigurationPolicyValidator {
         validateExecutor("app.async.workflow", async.getWorkflow());
     }
 
-    private void validateExecutor(String name, AppProperties.Async.Executor executor) {
+    private void validateExecutor(String name, AsyncProperties.Executor executor) {
         if (executor == null || executor.getCorePoolSize() <= 0 || executor.getMaxPoolSize() <= 0
                 || executor.getCorePoolSize() > executor.getMaxPoolSize()
                 || executor.getQueueCapacity() <= 0
@@ -378,21 +387,21 @@ public class ConfigurationPolicyValidator {
         }
     }
 
-    private void validateCache(AppProperties.Cache cache) {
+    private void validateCache(CacheProperties cache) {
         if (cache == null || cache.getMaximumSize() <= 0 || cache.getExpireAfterWrite() == null
                 || cache.getExpireAfterWrite().isZero() || cache.getExpireAfterWrite().isNegative()) {
             throw new IllegalStateException("app.cache must define a positive size and expiration");
         }
     }
 
-    private void validateMassIndexing(AppProperties.Search.MassIndexing indexing) {
+    private void validateMassIndexing(SearchProperties.MassIndexing indexing) {
         if (indexing == null || indexing.getThreadsToLoadObjects() <= 0
                 || indexing.getBatchSizeToLoadObjects() <= 0 || indexing.getIdFetchSize() <= 0) {
             throw new IllegalStateException("app.search.mass-indexing values must be positive");
         }
     }
 
-    private void validateDirectory(AppProperties.Directory directory) {
+    private void validateDirectory(DirectoryProperties directory) {
         if (directory == null || directory.getDefaultPageIndex() < 0
                 || directory.getDefaultPageSize() < directory.getMinPageSize()
                 || directory.getMinPageSize() <= 0

@@ -14,7 +14,7 @@ import com.project.souklab.dao.FeedPostLikeRepository;
 import com.project.souklab.dao.FeedPostBookmarkRepository;
 import com.project.souklab.dao.FormationRepository;
 import com.project.souklab.dao.UserRepository;
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.FeedProperties;
 import com.project.souklab.dto.feed.FeedPostCreateDTO;
 import com.project.souklab.exception.ForbiddenException;
 import com.project.souklab.filestorage.FileUrlResolver;
@@ -40,6 +40,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -87,7 +88,7 @@ class FeedPostServiceTest {
     @Mock private NotificationService notificationService;
     @Mock private StorageObjectLifecycle storageObjectLifecycle;
     @Mock private AccessControlService accessControlService;
-    @Mock private AppProperties appProperties;
+    @Spy private FeedProperties feedProperties = feedProperties();
     @Mock private Clock clock;
     @Mock private FeedPrivacyService feedPrivacyService;
 
@@ -106,15 +107,14 @@ class FeedPostServiceTest {
         lenient().when(userRepository.findByEmail("artisan@example.com")).thenReturn(Optional.of(user));
         lenient().when(accessControlService.isAdmin(any())).thenReturn(false);
         lenient().when(accessControlService.canManageArtisanContent(any())).thenReturn(true);
-        lenient().when(appProperties.getFeed()).thenReturn(feedProperties());
         lenient().when(feedPrivacyService.protectPost(any(), any()))
                 .thenAnswer(invocation -> invocation.getArgument(1));
         lenient().when(clock.instant()).thenReturn(Instant.parse("2026-01-01T00:00:00Z"));
         lenient().when(clock.getZone()).thenReturn(ZoneOffset.UTC);
     }
 
-    private AppProperties.Feed feedProperties() {
-        AppProperties.Feed feed = new AppProperties.Feed();
+    private static FeedProperties feedProperties() {
+        FeedProperties feed = new FeedProperties();
         feed.setMaxMediaPerPost(10);
         feed.setAllowedImageMimeTypes(List.of("image/jpeg", "image/png", "image/webp"));
         return feed;

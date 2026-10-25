@@ -1,8 +1,8 @@
 package com.project.souklab.service.artisan;
 import com.project.souklab.filestorage.exception.StorageException;
 import com.project.souklab.security.Permission;
-
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.AppStorageProperties;
+import com.project.souklab.config.ArtisanProperties;
 import com.project.souklab.dao.ArtisanCertificationRepository;
 import com.project.souklab.dao.ArtisanRepository;
 import com.project.souklab.dto.artisan.CertificationResponseDTO;
@@ -95,7 +95,10 @@ class ArtisanCertificationServiceTest {
     private FileUrlResolver fileUrlResolver;
 
     @Spy
-    private AppProperties appProperties = new AppProperties();
+    private ArtisanProperties artisanProperties = new ArtisanProperties();
+
+    @Spy
+    private AppStorageProperties appStorageProperties = new AppStorageProperties();
 
     @Spy
     private Clock clock = Clock.systemUTC();
@@ -108,10 +111,10 @@ class ArtisanCertificationServiceTest {
 
     @BeforeEach
     void setUp() {
-        appProperties.getStorage().setFileServingPrefix("/api/v1/files/");
-        appProperties.getArtisan().getCertification().setMaxCount(10);
-        appProperties.getArtisan().getCertification().setMaxFileSize(DataSize.ofMegabytes(10));
-        appProperties.getArtisan().getCertification().setAllowedMimeTypes(List.of("application/pdf", "image/jpeg", "image/png"));
+        appStorageProperties.setFileServingPrefix("/api/v1/files/");
+        artisanProperties.getCertification().setMaxCount(10);
+        artisanProperties.getCertification().setMaxFileSize(DataSize.ofMegabytes(10));
+        artisanProperties.getCertification().setAllowedMimeTypes(List.of("application/pdf", "image/jpeg", "image/png"));
         lenient().when(fileUrlResolver.toStorageKey(anyString())).thenAnswer(invocation -> invocation.getArgument(0, String.class).replace("/api/v1/files/", ""));
         testUser = User.builder()
                 .email(ARTISAN_EMAIL)
@@ -375,7 +378,7 @@ class ArtisanCertificationServiceTest {
         @DisplayName("uploadCertification_whenCustomQuotaConfigured_shouldRespectCustomQuota")
         void uploadCertification_whenCustomQuotaConfigured_shouldRespectCustomQuota() {
             authenticateArtisan();
-            appProperties.getArtisan().getCertification().setMaxCount(3);
+            artisanProperties.getCertification().setMaxCount(3);
 
             MockMultipartFile file = new MockMultipartFile("file", "cert.pdf", "application/pdf", "bytes".getBytes());
             when(certificationRepository.countByArtisanIdAndDeletedAtIsNull(ARTISAN_ID)).thenReturn(3L);
@@ -394,7 +397,7 @@ class ArtisanCertificationServiceTest {
         @DisplayName("uploadCertification_whenCustomMaxFileSizeConfigured_shouldRespectCustomLimit")
         void uploadCertification_whenCustomMaxFileSizeConfigured_shouldRespectCustomLimit() {
             authenticateArtisan();
-            appProperties.getArtisan().getCertification().setMaxFileSize(DataSize.ofMegabytes(5));
+            artisanProperties.getCertification().setMaxFileSize(DataSize.ofMegabytes(5));
 
             long oversized = (5L * 1024 * 1024) + 1024;
             MockMultipartFile largeFile = new MockMultipartFile("file", "large.pdf", "application/pdf", new byte[10]) {

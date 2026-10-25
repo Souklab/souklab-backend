@@ -4,7 +4,7 @@ import org.springframework.security.access.AccessDeniedException;
 
 import com.project.souklab.dto.chat.TypingCommand;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.ChatProperties;
 import com.project.souklab.dto.chat.MessageResponse;
 import com.project.souklab.dto.chat.SendMessageRequest;
 import com.project.souklab.service.chat.ConversationService;
@@ -33,9 +33,9 @@ class ChatStompControllerTest {
 
     @BeforeEach
     void setUp() {
-        AppProperties properties = new AppProperties();
-        properties.getChat().setWebsocketProtocolVersion("v1");
-        properties.getChat().setMessageDestinationPrefix("/queue/chat");
+        ChatProperties properties = new ChatProperties();
+        properties.setWebsocketProtocolVersion("v1");
+        properties.setMessageDestinationPrefix("/queue/chat");
         controller = new ChatStompController(service, messagingTemplate, properties, Clock.systemUTC());
         principal = new UsernamePasswordAuthenticationToken("user@test", null, List.of());
     }

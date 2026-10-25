@@ -1,6 +1,6 @@
 package com.project.souklab.service.security;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.JwtProperties;
 import com.project.souklab.dao.RefreshTokenRepository;
 import com.project.souklab.dao.UserRepository;
 import com.project.souklab.exception.ResourceNotFoundException;
@@ -22,7 +22,7 @@ public class RefreshTokenService {
 
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserRepository userRepository;
-    private final AppProperties appProperties;
+    private final JwtProperties jwtProperties;
     private final Clock clock;
 
     @Transactional
@@ -43,7 +43,7 @@ public class RefreshTokenService {
                 .orElse(RefreshToken.builder().user(user).build());
 
         refreshToken.setUser(user);
-        refreshToken.setExpiryDate(Instant.now(clock).plusMillis(appProperties.getJwt().getRefreshTokenExpirationMs()));
+        refreshToken.setExpiryDate(Instant.now(clock).plusMillis(jwtProperties.getRefreshTokenExpirationMs()));
         refreshToken.setToken(UUID.randomUUID().toString());
 
         return refreshTokenRepository.save(refreshToken);
@@ -59,7 +59,7 @@ public class RefreshTokenService {
         RefreshToken newToken = RefreshToken.builder()
                 .user(user)
                 .token(UUID.randomUUID().toString())
-                .expiryDate(Instant.now(clock).plusMillis(appProperties.getJwt().getRefreshTokenExpirationMs()))
+                .expiryDate(Instant.now(clock).plusMillis(jwtProperties.getRefreshTokenExpirationMs()))
                 .build();
 
         return refreshTokenRepository.save(newToken);

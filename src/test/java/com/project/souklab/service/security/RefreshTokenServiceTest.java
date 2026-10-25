@@ -1,6 +1,6 @@
 package com.project.souklab.service.security;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.JwtProperties;
 import com.project.souklab.dao.RefreshTokenRepository;
 import com.project.souklab.dao.UserRepository;
 import com.project.souklab.exception.ResourceNotFoundException;
@@ -43,7 +43,7 @@ class RefreshTokenServiceTest {
     @Mock
     private UserRepository userRepository;
 
-    private AppProperties appProperties;
+    private JwtProperties jwtProperties;
     private Clock fixedClock;
     private RefreshTokenService refreshTokenService;
 
@@ -51,13 +51,13 @@ class RefreshTokenServiceTest {
     void setUp() {
         fixedClock = Clock.fixed(FIXED_INSTANT, ZONE_ID);
 
-        appProperties = new AppProperties();
-        appProperties.getJwt().setRefreshTokenExpirationMs(REFRESH_TOKEN_EXPIRATION_MS);
+        jwtProperties = new JwtProperties();
+        jwtProperties.setRefreshTokenExpirationMs(REFRESH_TOKEN_EXPIRATION_MS);
 
         refreshTokenService = new RefreshTokenService(
                 refreshTokenRepository,
                 userRepository,
-                appProperties,
+                jwtProperties,
                 fixedClock
         );
     }

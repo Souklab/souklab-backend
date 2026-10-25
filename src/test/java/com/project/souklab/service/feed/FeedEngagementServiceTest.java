@@ -1,6 +1,6 @@
 package com.project.souklab.service.feed;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.FeedProperties;
 import com.project.souklab.dao.FeedPostBookmarkRepository;
 import com.project.souklab.dao.FeedPostCommentLikeRepository;
 import com.project.souklab.dao.FeedPostCommentRepository;
@@ -58,7 +58,7 @@ class FeedEngagementServiceTest {
     @Mock UserRepository userRepository;
     @Mock NotificationService notificationService;
     @Mock AccessControlService accessControlService;
-    @Mock AppProperties appProperties;
+    private final FeedProperties feedProperties = new FeedProperties();
     @Mock FeedPrivacyService feedPrivacyService;
 
     private FeedEngagementService service;
@@ -67,9 +67,10 @@ class FeedEngagementServiceTest {
 
     @BeforeEach
     void setUp() {
+        feedProperties.setMaxCommentLength(500);
         service = new FeedEngagementService(postRepository, postLikeRepository, bookmarkRepository,
                 commentRepository, commentLikeRepository, userRepository, notificationService,
-                appProperties, accessControlService, feedPrivacyService,
+                feedProperties, accessControlService, feedPrivacyService,
                 Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC));
         user = User.builder().email("user@test.com").status(AccountStatus.ACTIVE).build();
         user.setId("user-1");
@@ -80,9 +81,6 @@ class FeedEngagementServiceTest {
                 "user@test.com", "credentials", List.of()));
         when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
         lenient().when(postRepository.findByIdAndDeletedAtIsNull("post-1")).thenReturn(Optional.of(post));
-        AppProperties.Feed feed = new AppProperties.Feed();
-        feed.setMaxCommentLength(500);
-        lenient().when(appProperties.getFeed()).thenReturn(feed);
         lenient().when(feedPrivacyService.protectComment(any(), any()))
                 .thenAnswer(invocation -> invocation.getArgument(1));
     }

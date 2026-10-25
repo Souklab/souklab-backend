@@ -1,6 +1,6 @@
 package com.project.souklab.service.subscription;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.ChargilyProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -16,9 +16,9 @@ class WebhookSecurityServiceTest {
 
     @BeforeEach
     void setUp() {
-        AppProperties properties = new AppProperties();
-        properties.getChargily().setSecretKey("test-secret");
-        properties.getChargily().setWebhookEncryptionKey(Base64.getEncoder().encodeToString(new byte[32]));
+        ChargilyProperties properties = new ChargilyProperties();
+        properties.setSecretKey("test-secret");
+        properties.setWebhookEncryptionKey(Base64.getEncoder().encodeToString(new byte[32]));
         securityService = new WebhookSecurityService(properties);
     }
 

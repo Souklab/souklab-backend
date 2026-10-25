@@ -1,6 +1,6 @@
 package com.project.souklab.service.favorite;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.FavoritesProperties;
 import com.project.souklab.dao.ArtisanRepository;
 import com.project.souklab.dao.ClientFavoriteArtisanRepository;
 import com.project.souklab.dao.ClientRepository;
@@ -73,7 +73,7 @@ class ArtisanFavoriteServiceTest {
     @Mock
     private ViewerPremiumResolver viewerPremiumResolver;
 
-    private AppProperties appProperties;
+    private FavoritesProperties favoritesProperties;
     private Clock clock;
     private ArtisanFavoriteService service;
 
@@ -85,15 +85,15 @@ class ArtisanFavoriteServiceTest {
     @BeforeEach
     void setUp() {
         clock = Clock.fixed(Instant.parse("2026-09-23T10:15:00Z"), ZoneOffset.UTC);
-        appProperties = new AppProperties();
-        appProperties.getFavorites().setMaxPerClient(500);
+        favoritesProperties = new FavoritesProperties();
+        favoritesProperties.setMaxPerClient(500);
 
         service = new ArtisanFavoriteServiceImpl(
                 currentUserProvider,
                 clientRepository,
                 artisanRepository,
                 favoriteRepository,
-                appProperties,
+                favoritesProperties,
                 clock,
                 viewerPremiumResolver
         );
@@ -240,7 +240,7 @@ class ArtisanFavoriteServiceTest {
     @Test
     @DisplayName("addFavorite: throws ConflictException when client favorite cap is reached")
     void addFavorite_capReached_throwsConflictException() {
-        appProperties.getFavorites().setMaxPerClient(3);
+        favoritesProperties.setMaxPerClient(3);
         when(currentUserProvider.requireCurrentUser()).thenReturn(clientUser);
         when(clientRepository.findWithLockById(CLIENT_USER_ID)).thenReturn(Optional.of(client));
         when(artisanRepository.findById(ARTISAN_ID)).thenReturn(Optional.of(artisan));

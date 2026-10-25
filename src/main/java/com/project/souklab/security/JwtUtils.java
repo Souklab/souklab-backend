@@ -9,7 +9,7 @@ import io.jsonwebtoken.security.SecurityException;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.JwtProperties;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
@@ -29,27 +29,27 @@ public class JwtUtils {
     private static final String ERROR_UNEXPECTED_PRINCIPAL_TYPE_PREFIX = "Expected principal of type UserDetails, but found: ";
     public static final int AUTHORIZATION_SCHEMA_VERSION = 2;
 
-    private final AppProperties appProperties;
+    private final JwtProperties jwtProperties;
     private final Clock clock;
 
     @PostConstruct
     void validateConfiguration() {
-        String secret = appProperties.getJwt().getSecret();
+        String secret = jwtProperties.getSecret();
         if (secret == null || secret.getBytes(StandardCharsets.UTF_8).length < 32) {
             throw new IllegalStateException("app.jwt.secret must contain at least 32 UTF-8 bytes");
         }
-        if (appProperties.getJwt().getAccessTokenExpirationMs() == null
-                || appProperties.getJwt().getAccessTokenExpirationMs() <= 0) {
+        if (jwtProperties.getAccessTokenExpirationMs() == null
+                || jwtProperties.getAccessTokenExpirationMs() <= 0) {
             throw new IllegalStateException("app.jwt.access-token-expiration-ms must be positive");
         }
-        if (appProperties.getJwt().getRefreshTokenExpirationMs() == null
-                || appProperties.getJwt().getRefreshTokenExpirationMs() <= 0) {
+        if (jwtProperties.getRefreshTokenExpirationMs() == null
+                || jwtProperties.getRefreshTokenExpirationMs() <= 0) {
             throw new IllegalStateException("app.jwt.refresh-token-expiration-ms must be positive");
         }
     }
 
     private SecretKey getSigningKey() {
-        byte[] keyBytes = appProperties.getJwt().getSecret().getBytes(StandardCharsets.UTF_8);
+        byte[] keyBytes = jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
@@ -58,11 +58,11 @@ public class JwtUtils {
             throw new IllegalArgumentException(ERROR_UNEXPECTED_PRINCIPAL_TYPE_PREFIX
                     + (authentication.getPrincipal() != null ? authentication.getPrincipal().getClass().getSimpleName() : "null"));
         }
-        return generateTokenFromUsername(userPrincipal.getUsername(), appProperties.getJwt().getAccessTokenExpirationMs());
+        return generateTokenFromUsername(userPrincipal.getUsername(), jwtProperties.getAccessTokenExpirationMs());
     }
 
     public String generateAccessToken(String username) {
-        return generateTokenFromUsername(username, appProperties.getJwt().getAccessTokenExpirationMs());
+        return generateTokenFromUsername(username, jwtProperties.getAccessTokenExpirationMs());
     }
 
     public String generateRefreshToken(Authentication authentication) {
@@ -70,7 +70,7 @@ public class JwtUtils {
             throw new IllegalArgumentException(ERROR_UNEXPECTED_PRINCIPAL_TYPE_PREFIX
                     + (authentication.getPrincipal() != null ? authentication.getPrincipal().getClass().getSimpleName() : "null"));
         }
-        return generateTokenFromUsername(userPrincipal.getUsername(), appProperties.getJwt().getRefreshTokenExpirationMs());
+        return generateTokenFromUsername(userPrincipal.getUsername(), jwtProperties.getRefreshTokenExpirationMs());
     }
 
     public String generateTokenFromUsername(String username, long expirationMs) {

@@ -18,7 +18,7 @@ import org.springframework.context.annotation.Configuration;
 @RequiredArgsConstructor
 public class CacheConfig {
 
-    private final AppProperties appProperties;
+    private final CacheProperties cacheProperties;
 
     public static final String CACHE_REGIONS = "catalog_regions";
     public static final String CACHE_CATEGORIES = "catalog_categories";
@@ -43,8 +43,8 @@ public class CacheConfig {
         );
         cacheManager.setCaffeine(
             Caffeine.newBuilder()
-                .expireAfterWrite(appProperties.getCache().getExpireAfterWrite())
-                .maximumSize(appProperties.getCache().getMaximumSize())
+                .expireAfterWrite(cacheProperties.getExpireAfterWrite())
+                .maximumSize(cacheProperties.getMaximumSize())
         );
         return cacheManager;
     }

@@ -1,0 +1,432 @@
+spring:
+  application:
+    name: souklab
+  config:
+    import: optional:file:.env[.properties]
+  flyway:
+    enabled: ${FLYWAY_ENABLED}
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.mariadb.jdbc.Driver
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE}
+      minimum-idle: ${DB_POOL_MIN_IDLE}
+      connection-timeout: ${DB_POOL_CONNECTION_TIMEOUT}
+      validation-timeout: ${DB_POOL_VALIDATION_TIMEOUT}
+      leak-detection-threshold: ${DB_POOL_LEAK_DETECTION_THRESHOLD}
+  jpa:
+    database-platform: ${JPA_DATABASE_PLATFORM}
+    hibernate:
+      ddl-auto: ${JPA_HIBERNATE_DDL_AUTO}
+    show-sql: ${JPA_SHOW_SQL}
+    properties:
+      hibernate:
+        format_sql: ${JPA_FORMAT_SQL}
+        default_batch_fetch_size: ${JPA_DEFAULT_BATCH_FETCH_SIZE}
+        jdbc:
+          time_zone: UTC
+        search:
+          enabled: ${app.search.enabled}
+          backend:
+            type: elasticsearch
+            uris: ${app.search.uris}
+            username: ${app.search.username}
+            password: ${app.search.password}
+            connection_timeout: ${app.search.connection-timeout}
+            read_timeout: ${app.search.read-timeout}
+            version: ${ELASTICSEARCH_VERSION}
+            version_check:
+              enabled: ${ELASTICSEARCH_VERSION_CHECK_ENABLED}
+            analysis:
+              configurer: com.project.souklab.config.search.CustomElasticsearchAnalysisConfigurer
+          schema_management:
+            strategy: ${app.search.schema-management}
+          indexing:
+            plan:
+              synchronization:
+                strategy: ${HIBERNATE_SEARCH_SYNC_STRATEGY}
+    open-in-view: 'false'
+  data:
+    web:
+      pageable:
+        default-page-size: ${PAGEABLE_DEFAULT_SIZE}
+        max-page-size: ${PAGEABLE_MAX_SIZE}
+  servlet:
+    multipart:
+      max-file-size: ${MULTIPART_MAX_FILE_SIZE}
+      max-request-size: ${MULTIPART_MAX_REQUEST_SIZE}
+  mail:
+    host: ${SMTP_HOST:smtp.gmail.com}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SMTP_AUTH:true}
+          starttls:
+            enable: ${SMTP_STARTTLS:true}
+          from: ${SMTP_USERNAME:}
+          connectiontimeout: ${SMTP_CONNECTION_TIMEOUT:5000}
+          timeout: ${SMTP_READ_TIMEOUT:10000}
+          writetimeout: ${SMTP_WRITE_TIMEOUT:10000}
+        debug: ${SPRING_MAIL_DEBUG:true}
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_OAUTH_CLIENT_ID}
+            client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET}
+            scope: openid,profile,email
+            redirect-uri: ${GOOGLE_OAUTH_REDIRECT_URI}
+server:
+  port: ${PORT}
+  forward-headers-strategy: framework
+app:
+  jwt:
+    secret: ${APP_JWT_SECRET}
+    access-token-expiration-ms: ${APP_JWT_ACCESS_EXP}
+    refresh-token-expiration-ms: ${APP_JWT_REFRESH_EXP}
+  auth:
+    lockout:
+      max-attempts: ${AUTH_LOCKOUT_MAX_ATTEMPTS}
+      duration-minutes: ${AUTH_LOCKOUT_DURATION_MINUTES}
+    verification:
+      max-attempts: ${AUTH_VERIFICATION_MAX_ATTEMPTS}
+      expiration-minutes: ${AUTH_VERIFICATION_EXPIRATION_MINUTES}
+      code-length: ${AUTH_VERIFICATION_CODE_LENGTH}
+  rate-limit:
+    enabled: ${APP_RATE_LIMIT_ENABLED}
+    capacity: ${APP_RATE_LIMIT_CAPACITY}
+    refill-duration: ${APP_RATE_LIMIT_REFILL_DURATION}
+    user-enabled: ${APP_RATE_LIMIT_USER_ENABLED:${APP_RATE_LIMIT_ENABLED}}
+    user-capacity: ${APP_RATE_LIMIT_USER_CAPACITY:${APP_RATE_LIMIT_CAPACITY}}
+    user-refill-duration: ${APP_RATE_LIMIT_USER_REFILL_DURATION:${APP_RATE_LIMIT_REFILL_DURATION}}
+    endpoints:
+      authentication:
+        enabled: ${RATE_LIMIT_AUTH_ENABLED:${APP_RATE_LIMIT_ENABLED}}
+        capacity: ${RATE_LIMIT_AUTH_CAPACITY:${APP_RATE_LIMIT_CAPACITY}}
+        refill-duration: ${RATE_LIMIT_AUTH_REFILL_DURATION:${APP_RATE_LIMIT_REFILL_DURATION}}
+        user-capacity: ${RATE_LIMIT_AUTH_USER_CAPACITY:${APP_RATE_LIMIT_USER_CAPACITY:${APP_RATE_LIMIT_CAPACITY}}}
+        user-refill-duration: ${RATE_LIMIT_AUTH_USER_REFILL_DURATION:${APP_RATE_LIMIT_USER_REFILL_DURATION:${APP_RATE_LIMIT_REFILL_DURATION}}}
+      public-api:
+        enabled: ${RATE_LIMIT_PUBLIC_ENABLED:${APP_RATE_LIMIT_ENABLED}}
+        capacity: ${RATE_LIMIT_PUBLIC_CAPACITY:${APP_RATE_LIMIT_CAPACITY}}
+        refill-duration: ${RATE_LIMIT_PUBLIC_REFILL_DURATION:${APP_RATE_LIMIT_REFILL_DURATION}}
+        user-capacity: ${RATE_LIMIT_PUBLIC_USER_CAPACITY:${APP_RATE_LIMIT_USER_CAPACITY:${APP_RATE_LIMIT_CAPACITY}}}
+        user-refill-duration: ${RATE_LIMIT_PUBLIC_USER_REFILL_DURATION:${APP_RATE_LIMIT_USER_REFILL_DURATION:${APP_RATE_LIMIT_REFILL_DURATION}}}
+      admin-api:
+        enabled: ${RATE_LIMIT_ADMIN_ENABLED:${APP_RATE_LIMIT_ENABLED}}
+        capacity: ${RATE_LIMIT_ADMIN_CAPACITY:${APP_RATE_LIMIT_CAPACITY}}
+        refill-duration: ${RATE_LIMIT_ADMIN_REFILL_DURATION:${APP_RATE_LIMIT_REFILL_DURATION}}
+        user-capacity: ${RATE_LIMIT_ADMIN_USER_CAPACITY:${APP_RATE_LIMIT_USER_CAPACITY:${APP_RATE_LIMIT_CAPACITY}}}
+        user-refill-duration: ${RATE_LIMIT_ADMIN_USER_REFILL_DURATION:${APP_RATE_LIMIT_USER_REFILL_DURATION:${APP_RATE_LIMIT_REFILL_DURATION}}}
+      analytics-jobs:
+        enabled: ${RATE_LIMIT_ANALYTICS_ENABLED:${APP_RATE_LIMIT_ENABLED}}
+        capacity: ${RATE_LIMIT_ANALYTICS_CAPACITY:${APP_RATE_LIMIT_CAPACITY}}
+        refill-duration: ${RATE_LIMIT_ANALYTICS_REFILL_DURATION:${APP_RATE_LIMIT_REFILL_DURATION}}
+        user-capacity: ${RATE_LIMIT_ANALYTICS_USER_CAPACITY:${APP_RATE_LIMIT_USER_CAPACITY:${APP_RATE_LIMIT_CAPACITY}}}
+        user-refill-duration: ${RATE_LIMIT_ANALYTICS_USER_REFILL_DURATION:${APP_RATE_LIMIT_USER_REFILL_DURATION:${APP_RATE_LIMIT_REFILL_DURATION}}}
+      analytics-results:
+        enabled: ${RATE_LIMIT_ANALYTICS_RESULTS_ENABLED:${APP_RATE_LIMIT_ENABLED}}
+        capacity: ${RATE_LIMIT_ANALYTICS_RESULTS_CAPACITY:${APP_RATE_LIMIT_CAPACITY}}
+        refill-duration: ${RATE_LIMIT_ANALYTICS_RESULTS_REFILL_DURATION:${APP_RATE_LIMIT_REFILL_DURATION}}
+        user-capacity: ${RATE_LIMIT_ANALYTICS_RESULTS_USER_CAPACITY:${APP_RATE_LIMIT_USER_CAPACITY:${APP_RATE_LIMIT_CAPACITY}}}
+        user-refill-duration: ${RATE_LIMIT_ANALYTICS_RESULTS_USER_REFILL_DURATION:${APP_RATE_LIMIT_USER_REFILL_DURATION:${APP_RATE_LIMIT_REFILL_DURATION}}}
+      csv-exports:
+        enabled: ${RATE_LIMIT_CSV_ENABLED:${APP_RATE_LIMIT_ENABLED}}
+        capacity: ${RATE_LIMIT_CSV_CAPACITY:${APP_RATE_LIMIT_CAPACITY}}
+        refill-duration: ${RATE_LIMIT_CSV_REFILL_DURATION:${APP_RATE_LIMIT_REFILL_DURATION}}
+        user-capacity: ${RATE_LIMIT_CSV_USER_CAPACITY:${APP_RATE_LIMIT_USER_CAPACITY:${APP_RATE_LIMIT_CAPACITY}}}
+        user-refill-duration: ${RATE_LIMIT_CSV_USER_REFILL_DURATION:${APP_RATE_LIMIT_USER_REFILL_DURATION:${APP_RATE_LIMIT_REFILL_DURATION}}}
+      chargily-webhook:
+        enabled: ${RATE_LIMIT_WEBHOOK_ENABLED:${APP_RATE_LIMIT_ENABLED}}
+        capacity: ${RATE_LIMIT_WEBHOOK_CAPACITY:${APP_RATE_LIMIT_CAPACITY}}
+        refill-duration: ${RATE_LIMIT_WEBHOOK_REFILL_DURATION:${APP_RATE_LIMIT_REFILL_DURATION}}
+        user-capacity: ${RATE_LIMIT_WEBHOOK_USER_CAPACITY:${APP_RATE_LIMIT_USER_CAPACITY:${APP_RATE_LIMIT_CAPACITY}}}
+        user-refill-duration: ${RATE_LIMIT_WEBHOOK_USER_REFILL_DURATION:${APP_RATE_LIMIT_USER_REFILL_DURATION:${APP_RATE_LIMIT_REFILL_DURATION}}}
+    backend: ${APP_RATE_LIMIT_BACKEND:local}
+    key-prefix: ${APP_RATE_LIMIT_KEY_PREFIX:souklab:local}
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      database: ${REDIS_DATABASE:0}
+      password: ${REDIS_PASSWORD:}
+      connection-timeout: ${REDIS_CONNECTION_TIMEOUT:2000}
+      command-timeout: ${REDIS_COMMAND_TIMEOUT:1000}
+  analytics:
+    default-page-size: ${ANALYTICS_DEFAULT_PAGE_SIZE:20}
+    maximum-page-size: ${ANALYTICS_MAXIMUM_PAGE_SIZE:100}
+    maximum-range-days: ${ANALYTICS_MAXIMUM_RANGE_DAYS:366}
+    maximum-bucket-count: ${ANALYTICS_MAXIMUM_BUCKET_COUNT:500}
+    supported-buckets: ${ANALYTICS_SUPPORTED_BUCKETS:DAY,WEEK,MONTH,QUARTER}
+    rollup-batch-size: ${ANALYTICS_ROLLUP_BATCH_SIZE:1000}
+    backfill-batch-size: ${ANALYTICS_BACKFILL_BATCH_SIZE:1000}
+    query-timeout: ${ANALYTICS_QUERY_TIMEOUT:10s}
+    job-retention: ${ANALYTICS_JOB_RETENTION:24h}
+    business-time-zone: ${ANALYTICS_BUSINESS_TIME_ZONE:Africa/Algiers}
+    jobs:
+      concurrency: ${ANALYTICS_JOB_CONCURRENCY:2}
+      maximum-result-rows: ${ANALYTICS_MAX_RESULT_ROWS:500}
+      maximum-result-bytes: ${ANALYTICS_MAX_RESULT_BYTES:10485760}
+    exports:
+      storage-prefix: ${ANALYTICS_EXPORT_STORAGE_PREFIX:analytics/exports}
+      retention: ${ANALYTICS_EXPORT_RETENTION:24h}
+    retention:
+      raw-events: ${ANALYTICS_RAW_EVENT_RETENTION:90d}
+      jobs: ${ANALYTICS_JOB_RETENTION:24h}
+      rollups: ${ANALYTICS_ROLLUP_RETENTION:730d}
+      cleanup-interval: ${ANALYTICS_CLEANUP_INTERVAL:1h}
+      cleanup-batch-size: ${ANALYTICS_CLEANUP_BATCH_SIZE:1000}
+    rabbit:
+      enabled: ${ANALYTICS_RABBIT_ENABLED:false}
+      host: ${ANALYTICS_RABBIT_HOST:localhost}
+      port: ${ANALYTICS_RABBIT_PORT:5672}
+      username: ${ANALYTICS_RABBIT_USERNAME:guest}
+      password: ${ANALYTICS_RABBIT_PASSWORD:guest}
+      exchange: ${ANALYTICS_RABBIT_EXCHANGE:souklab.analytics}
+      queue: ${ANALYTICS_RABBIT_QUEUE:souklab.analytics.events}
+      routing-key: ${ANALYTICS_RABBIT_ROUTING_KEY:activity}
+      dead-letter-exchange: ${ANALYTICS_RABBIT_DLX:souklab.analytics.dlx}
+      dead-letter-queue: ${ANALYTICS_RABBIT_DLQ:souklab.analytics.events.dlq}
+      relay-batch-size: ${ANALYTICS_RABBIT_RELAY_BATCH_SIZE:100}
+      max-attempts: ${ANALYTICS_RABBIT_MAX_ATTEMPTS:5}
+      retry-backoff: ${ANALYTICS_RABBIT_RETRY_BACKOFF:5s}
+      max-retry-backoff: ${ANALYTICS_RABBIT_MAX_RETRY_BACKOFF:1m}
+      retry-multiplier: ${ANALYTICS_RABBIT_RETRY_MULTIPLIER:2.0}
+      poll-interval: ${ANALYTICS_RABBIT_POLL_INTERVAL:2s}
+      confirm-timeout: ${ANALYTICS_RABBIT_CONFIRM_TIMEOUT:5s}
+  openapi:
+    enabled: ${OPENAPI_ENABLED:true}
+    path: ${OPENAPI_PATH:/v3/api-docs}
+    swagger-path: ${OPENAPI_SWAGGER_PATH:/swagger-ui.html}
+    title: ${OPENAPI_TITLE:Souklab API}
+    version: ${OPENAPI_VERSION:1.0.0}
+  health:
+    dependency-timeout: ${APP_HEALTH_DEPENDENCY_TIMEOUT:2s}
+  search:
+    enabled: ${HIBERNATE_SEARCH_ENABLED}
+    uris: ${ELASTICSEARCH_URIS}
+    username: ${ELASTICSEARCH_USERNAME}
+    password: ${ELASTICSEARCH_PASSWORD}
+    connection-timeout: ${ELASTICSEARCH_CONNECTION_TIMEOUT}
+    read-timeout: ${ELASTICSEARCH_READ_TIMEOUT}
+    index-prefix: ${ELASTICSEARCH_INDEX_PREFIX}
+    schema-management: ${HIBERNATE_SEARCH_SCHEMA_MANAGEMENT}
+    schema-bootstrap-enabled: ${SEARCH_SCHEMA_BOOTSTRAP_ENABLED:false}
+    sync-on-startup: ${SEARCH_SYNC_ON_STARTUP}
+    mass-indexing:
+      threads-to-load-objects: ${SEARCH_MASS_INDEXING_THREADS}
+      batch-size-to-load-objects: ${SEARCH_MASS_INDEXING_BATCH_SIZE}
+      id-fetch-size: ${SEARCH_MASS_INDEXING_ID_FETCH_SIZE}
+  async:
+    application:
+      core-pool-size: ${ASYNC_APPLICATION_CORE_POOL_SIZE}
+      max-pool-size: ${ASYNC_APPLICATION_MAX_POOL_SIZE}
+      queue-capacity: ${ASYNC_APPLICATION_QUEUE_CAPACITY}
+      thread-name-prefix: ${ASYNC_APPLICATION_THREAD_NAME_PREFIX}
+    workflow:
+      core-pool-size: ${ASYNC_WORKFLOW_CORE_POOL_SIZE}
+      max-pool-size: ${ASYNC_WORKFLOW_MAX_POOL_SIZE}
+      queue-capacity: ${ASYNC_WORKFLOW_QUEUE_CAPACITY}
+      thread-name-prefix: ${ASYNC_WORKFLOW_THREAD_NAME_PREFIX}
+  cache:
+    expire-after-write: ${APP_CACHE_EXPIRE_AFTER_WRITE}
+    maximum-size: ${APP_CACHE_MAXIMUM_SIZE}
+  storage:
+    upload-dir: ${APP_STORAGE_UPLOADS}
+    thumbnails: ${APP_STORAGE_THUMBNAILS}
+    indexes: ${APP_STORAGE_INDEXES}
+    file-serving-prefix: ${APP_STORAGE_FILE_SERVING_PREFIX}
+  artisan:
+    gallery:
+      max-images: ${ARTISAN_GALLERY_MAX_IMAGES}
+      max-file-size: ${ARTISAN_GALLERY_MAX_FILE_SIZE}
+      allowed-mime-types: ${ARTISAN_GALLERY_ALLOWED_MIME_TYPES}
+    certification:
+      max-count: ${ARTISAN_CERTIFICATION_MAX_COUNT}
+      max-file-size: ${ARTISAN_CERTIFICATION_MAX_FILE_SIZE}
+      allowed-mime-types: ${ARTISAN_CERTIFICATION_ALLOWED_MIME_TYPES}
+    formateur:
+      reapply-cooldown-days: ${ARTISAN_FORMATEUR_REAPPLY_COOLDOWN_DAYS}
+  formation:
+    thumbnail:
+      max-file-size: ${FORMATION_THUMBNAIL_MAX_FILE_SIZE}
+      allowed-mime-types: ${FORMATION_THUMBNAIL_ALLOWED_MIME_TYPES}
+    file:
+      max-count: ${FORMATION_FILE_MAX_COUNT}
+      max-file-size: ${FORMATION_FILE_MAX_FILE_SIZE}
+      allowed-mime-types: ${FORMATION_FILE_ALLOWED_MIME_TYPES}
+    default-currency: ${FORMATION_DEFAULT_CURRENCY}
+    cancellation:
+      deadline-hours: ${FORMATION_CANCELLATION_DEADLINE_HOURS}
+    pagination:
+      default-page-size: ${FORMATION_DEFAULT_PAGE_SIZE}
+  directory:
+    default-page-index: ${DIRECTORY_DEFAULT_PAGE_INDEX}
+    default-page-size: ${DIRECTORY_DEFAULT_PAGE_SIZE}
+    min-page-size: ${DIRECTORY_MIN_PAGE_SIZE}
+    max-page-size: ${DIRECTORY_MAX_PAGE_SIZE}
+  chat:
+    message-max-length: ${CHAT_MESSAGE_MAX_LENGTH}
+    attachment-max-count: ${CHAT_ATTACHMENT_MAX_COUNT}
+    min-page-size: ${CHAT_MIN_PAGE_SIZE}
+    default-page-size: ${CHAT_DEFAULT_PAGE_SIZE}
+    max-page-size: ${CHAT_MAX_PAGE_SIZE}
+    cursor-lifetime: ${CHAT_CURSOR_LIFETIME}
+    typing-event-interval: ${CHAT_TYPING_EVENT_INTERVAL}
+    websocket-protocol-version: ${CHAT_WEBSOCKET_PROTOCOL_VERSION}
+    application-destination-prefix: ${CHAT_APPLICATION_DESTINATION_PREFIX}
+    user-destination-prefix: ${CHAT_USER_DESTINATION_PREFIX}
+    message-destination-prefix: ${CHAT_MESSAGE_DESTINATION_PREFIX}
+    event-destination: ${CHAT_EVENT_DESTINATION}
+    presence-destination: ${CHAT_PRESENCE_DESTINATION}
+    notification-destination: ${CHAT_NOTIFICATION_DESTINATION}
+    websocket-endpoint: ${CHAT_WEBSOCKET_ENDPOINT}
+    broker-destination-prefixes: ${CHAT_BROKER_DESTINATION_PREFIXES}
+    unresolved-user-destination: ${CHAT_UNRESOLVED_USER_DESTINATION}
+    user-registry-broadcast: ${CHAT_USER_REGISTRY_BROADCAST}
+  notification:
+    max-message-length: ${NOTIFICATION_MAX_MESSAGE_LENGTH}
+  feed:
+    max-media-per-post: ${FEED_MAX_MEDIA_PER_POST}
+    allowed-image-mime-types: ${FEED_ALLOWED_IMAGE_MIME_TYPES}
+    max-title-length: ${FEED_MAX_TITLE_LENGTH}
+    max-body-length: ${FEED_MAX_BODY_LENGTH}
+    max-comment-length: ${FEED_MAX_COMMENT_LENGTH}
+    max-tags-per-post: ${FEED_MAX_TAGS_PER_POST}
+    max-tag-length: ${FEED_MAX_TAG_LENGTH}
+  favorites:
+    max-per-client: ${FAVORITES_MAX_PER_CLIENT:500}
+  email:
+    use-smtp: ${APP_EMAIL_USE_SMTP:true}
+    from: ${APP_EMAIL_FROM:${SMTP_USERNAME:}}
+  mailersend:
+    api-key: ${MAILERSEND_API_KEY}
+    api-url: ${MAILERSEND_API_URL}
+    sender-email: ${MAILERSEND_SENDER_EMAIL}
+    sender-name: ${MAILERSEND_SENDER_NAME}
+    connection-timeout: ${MAILERSEND_CONNECTION_TIMEOUT}
+    read-timeout: ${MAILERSEND_READ_TIMEOUT}
+  support:
+    email: ${APP_SUPPORT_EMAIL}
+    contact-message: ${APP_SUPPORT_CONTACT_MESSAGE}
+  chargily:
+    api-key: ${CHARGILY_API_KEY}
+    secret-key: ${CHARGILY_SECRET_KEY}
+    mode: ${CHARGILY_MODE}
+    base-url: ${CHARGILY_BASE_URL}
+    webhook-url: ${CHARGILY_WEBHOOK_URL}
+    success-url: ${CHARGILY_SUCCESS_URL}
+    failure-url: ${CHARGILY_FAILURE_URL}
+    locale: ${CHARGILY_LOCALE}
+    fee-allocation: ${CHARGILY_FEE_ALLOCATION}
+    connect-timeout: ${CHARGILY_CONNECT_TIMEOUT}
+    read-timeout: ${CHARGILY_READ_TIMEOUT}
+    response-timeout: ${CHARGILY_RESPONSE_TIMEOUT}
+    retry-count: ${CHARGILY_RETRY_COUNT}
+    retry-backoff: ${CHARGILY_RETRY_BACKOFF}
+    request-body-limit: ${CHARGILY_REQUEST_BODY_LIMIT}
+    webhook-encryption-key: ${CHARGILY_WEBHOOK_ENCRYPTION_KEY}
+    enabled: ${CHARGILY_ENABLED}
+    currency: ${SUBSCRIPTION_CURRENCY}
+  subscription:
+    enabled: ${SUBSCRIPTION_ENABLED}
+    currency: ${SUBSCRIPTION_CURRENCY}
+    reminder-offsets: ${SUBSCRIPTION_REMINDER_OFFSETS}
+    lifecycle-interval: ${SUBSCRIPTION_LIFECYCLE_INTERVAL}
+    lifecycle-time-zone: ${SUBSCRIPTION_LIFECYCLE_TIME_ZONE}
+    lifecycle-batch-size: ${SUBSCRIPTION_LIFECYCLE_BATCH_SIZE}
+    minimum-plan-amount: ${SUBSCRIPTION_MINIMUM_PLAN_AMOUNT}
+    maximum-plan-amount: ${SUBSCRIPTION_MAXIMUM_PLAN_AMOUNT}
+    checkout-idempotency-retention: ${SUBSCRIPTION_CHECKOUT_IDEMPOTENCY_RETENTION}
+    webhook-retention: ${SUBSCRIPTION_WEBHOOK_RETENTION}
+  admin:
+    default-email: ${APP_ADMIN_DEFAULT_EMAIL}
+    default-password: ${APP_ADMIN_DEFAULT_PASSWORD}
+    bootstrap-enabled: ${APP_ADMIN_BOOTSTRAP_ENABLED}
+    default-ban-reason: ${APP_ADMIN_DEFAULT_BAN_REASON}
+    default-timeout-reason: ${APP_ADMIN_DEFAULT_TIMEOUT_REASON}
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS}
+  relay:
+    host: ${RELAY_HOST}
+    port: ${RELAY_PORT}
+    client-login: ${RELAY_CLIENT_LOGIN}
+    client-passcode: ${RELAY_CLIENT_PASSCODE}
+    system-login: ${RELAY_SYSTEM_LOGIN}
+    system-passcode: ${RELAY_SYSTEM_PASSCODE}
+  oauth:
+    google:
+      client-id: ${GOOGLE_OAUTH_CLIENT_ID}
+      client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET}
+      redirect-uri: ${GOOGLE_OAUTH_REDIRECT_URI}
+      authorized-redirect-uri: ${GOOGLE_OAUTH_AUTHORIZED_REDIRECT_URI:http://localhost/connexion/google}
+    intent-cookie-max-age-seconds: ${OAUTH_INTENT_COOKIE_MAX_AGE_SECONDS}
+springdoc:
+  api-docs:
+    enabled: ${OPENAPI_ENABLED:true}
+    path: ${OPENAPI_PATH:/v3/api-docs}
+  swagger-ui:
+    enabled: ${OPENAPI_ENABLED:true}
+    path: ${OPENAPI_SWAGGER_PATH:/swagger-ui.html}
+storage:
+  provider: ${STORAGE_PROVIDER}
+  validation:
+    max-file-size: ${STORAGE_MAX_FILE_SIZE}
+    allowed-mime-types: ${STORAGE_ALLOWED_MIME_TYPES}
+  s3:
+    endpoint: ${STORAGE_S3_ENDPOINT}
+    region: ${STORAGE_S3_REGION}
+    bucket: ${STORAGE_S3_BUCKET}
+    access-key: ${STORAGE_S3_ACCESS_KEY}
+    secret-key: ${STORAGE_S3_SECRET_KEY}
+    path-style-access: ${STORAGE_S3_PATH_STYLE_ACCESS}
+    auto-create-bucket: ${STORAGE_S3_AUTO_CREATE_BUCKET}
+  virus-scan:
+    enabled: ${STORAGE_VIRUS_SCAN_ENABLED}
+    host: ${STORAGE_VIRUS_SCAN_HOST}
+    port: ${STORAGE_VIRUS_SCAN_PORT}
+    connection-timeout: ${STORAGE_VIRUS_SCAN_CONNECTION_TIMEOUT}
+    read-timeout: ${STORAGE_VIRUS_SCAN_READ_TIMEOUT}
+    fail-open: ${STORAGE_VIRUS_SCAN_FAIL_OPEN}
+  rate-limit:
+    enabled: ${STORAGE_RATE_LIMIT_ENABLED}
+    capacity: ${STORAGE_RATE_LIMIT_CAPACITY}
+    refill-duration: ${STORAGE_RATE_LIMIT_REFILL_DURATION}
+avatar:
+  max-per-user: ${AVATAR_MAX_PER_USER}
+  allowed-mime-types: ${AVATAR_ALLOWED_MIME_TYPES}
+  rate-limit:
+    enabled: ${AVATAR_RATE_LIMIT_ENABLED}
+    capacity: ${AVATAR_RATE_LIMIT_CAPACITY}
+    refill-duration: ${AVATAR_RATE_LIMIT_REFILL_DURATION}
+logging:
+  level:
+    root: ${APP_LOGGING_LEVEL_ROOT}
+    com.project.souklab: ${APP_LOGGING_LEVEL_APP}
+    org.hibernate.search: ${APP_LOGGING_LEVEL_SEARCH}
+    org.hibernate.search.backend.elasticsearch.request: ${APP_LOGGING_LEVEL_SEARCH_REQUESTS}
+    org.hibernate.search.backend.elasticsearch.client.rest.request: ${APP_LOGGING_LEVEL_SEARCH_REQUESTS}
+    org.elasticsearch.client: ${APP_LOGGING_LEVEL_ELASTICSEARCH}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: 'true'
+  health:
+    livenessstate:
+      enabled: 'true'
+    readinessstate:
+      enabled: 'true'
+  info:
+    env:
+      enabled: 'false'

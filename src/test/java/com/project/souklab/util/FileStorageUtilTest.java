@@ -3,7 +3,7 @@ package com.project.souklab.util;
 import java.io.IOException;
 import java.io.InputStream;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.AppStorageProperties;
 import com.project.souklab.exception.AppException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -20,8 +20,8 @@ class FileStorageUtilTest {
 
     @Test
     void storesChecksAndDeletesPdfFiles() throws Exception {
-        AppProperties properties = new AppProperties();
-        properties.getStorage().setUploadDir(tempDir.toString());
+        AppStorageProperties properties = new AppStorageProperties();
+        properties.setUploadDir(tempDir.toString());
         FileStorageUtil storage = new FileStorageUtil(properties);
         String path = storage.storePdf(new MockMultipartFile("file", "document.pdf", "application/pdf", "pdf".getBytes()));
 
@@ -34,8 +34,8 @@ class FileStorageUtilTest {
 
     @Test
     void rejectsMissingFilesAndWrapsReadFailures() {
-        AppProperties properties = new AppProperties();
-        properties.getStorage().setUploadDir(tempDir.toString());
+        AppStorageProperties properties = new AppStorageProperties();
+        properties.setUploadDir(tempDir.toString());
         FileStorageUtil storage = new FileStorageUtil(properties);
         assertThatThrownBy(() -> storage.storePdf(null)).isInstanceOf(AppException.class);
         assertThatThrownBy(() -> storage.storePdf(new MockMultipartFile("file", new byte[0])))
@@ -52,15 +52,15 @@ class FileStorageUtilTest {
     void rejectsUnusableUploadDirectoryAndWrapsDeleteFailures() throws Exception {
         Path file = tempDir.resolve("not-a-directory");
         Files.writeString(file, "occupied");
-        AppProperties invalidProperties = new AppProperties();
-        invalidProperties.getStorage().setUploadDir(file.toString());
+        AppStorageProperties invalidProperties = new AppStorageProperties();
+        invalidProperties.setUploadDir(file.toString());
         assertThatThrownBy(() -> new FileStorageUtil(invalidProperties))
                 .isInstanceOf(AppException.class);
 
         Path nonEmptyDirectory = Files.createDirectory(tempDir.resolve("non-empty"));
         Files.writeString(nonEmptyDirectory.resolve("child"), "content");
-        AppProperties validProperties = new AppProperties();
-        validProperties.getStorage().setUploadDir(tempDir.toString());
+        AppStorageProperties validProperties = new AppStorageProperties();
+        validProperties.setUploadDir(tempDir.toString());
         FileStorageUtil storage = new FileStorageUtil(validProperties);
         assertThatThrownBy(() -> storage.deleteIfExists(nonEmptyDirectory.toString()))
                 .isInstanceOf(AppException.class);

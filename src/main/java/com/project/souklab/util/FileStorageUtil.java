@@ -1,6 +1,6 @@
 package com.project.souklab.util;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.AppStorageProperties;
 import com.project.souklab.exception.AppException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -16,8 +16,8 @@ import java.util.UUID;
 public class FileStorageUtil {
     private final Path uploadDir;
 
-    public FileStorageUtil(AppProperties appProperties) {
-        this.uploadDir = Path.of(appProperties.getStorage().getUploadDir()).toAbsolutePath().normalize();
+    public FileStorageUtil(AppStorageProperties appStorageProperties) {
+        this.uploadDir = Path.of(appStorageProperties.getUploadDir()).toAbsolutePath().normalize();
         try {
             Files.createDirectories(this.uploadDir);
         } catch (IOException ex) {
@@ -70,4 +70,3 @@ public class FileStorageUtil {
         }
     }
 }
-

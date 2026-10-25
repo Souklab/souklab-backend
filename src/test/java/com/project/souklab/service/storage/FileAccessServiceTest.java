@@ -136,6 +136,27 @@ class FileAccessServiceTest {
     }
 
     @Test
+    void authorize_allowsVerifiedCertificationForAnyUserWithFileReadPermission() {
+        User owner = User.builder().email("owner@example.com").build();
+        User viewer = User.builder().email("viewer@example.com").build();
+        Artisan artisan = Artisan.builder().user(owner).build();
+        ArtisanCertification certification = ArtisanCertification.builder()
+                .artisan(artisan)
+                .isVerified(true)
+                .build();
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(viewer.getEmail(), "credentials", List.of()));
+        when(userRepository.findByEmail(viewer.getEmail())).thenReturn(Optional.of(viewer));
+        when(fileUrlResolver.toUrl("verified-cert")).thenReturn("/files/verified-cert");
+        when(certificationRepository.findByDocumentUrlAndDeletedAtIsNull("/files/verified-cert"))
+                .thenReturn(Optional.of(certification));
+        when(accessControlService.hasPermission(any(), eq(Permission.File.READ))).thenReturn(true);
+        when(accessControlService.hasPermission(any(), eq(Permission.Admin.USERS))).thenReturn(false);
+
+        assertThat(fileAccessService().authorize("verified-cert")).isFalse();
+    }
+
+    @Test
     void authorize_rejectsCertificationForDifferentUserAndMissingFormationFile() {
         User owner = User.builder().email("owner@example.com").build();
         User viewer = User.builder().email("viewer@example.com").build();
@@ -190,6 +211,30 @@ class FileAccessServiceTest {
         when(artisanRepository.findByUserEmailIgnoreCase(participantUser.getEmail())).thenReturn(Optional.of(participant));
         when(formationEnrollmentRepository.existsByFormationIdAndArtisanIdAndStatus(
                 "formation", "participant-artisan", EnrollmentStatus.CONFIRMED)).thenReturn(true);
+
+        assertThat(fileAccessService().authorize("syllabus")).isFalse();
+    }
+
+    @Test
+    void authorize_allowsFormationFileForAttendedParticipant() {
+        User authorUser = User.builder().email("author@example.com").build();
+        Artisan author = Artisan.builder().id("author-artisan").user(authorUser).build();
+        Formation formation = Formation.builder().author(author).build();
+        formation.setId("formation");
+        FormationFile file = FormationFile.builder().formation(formation).storageKey("syllabus").build();
+
+        User participantUser = User.builder().email("attended@example.com").build();
+        Artisan participant = Artisan.builder().id("attended-artisan").user(participantUser).build();
+        authenticate(participantUser, Permission.Artisan.FORMATIONS);
+        when(userRepository.findByEmail(participantUser.getEmail())).thenReturn(Optional.of(participantUser));
+        when(formationFileRepository.findByStorageKeyAndDeletedAtIsNull("syllabus")).thenReturn(Optional.of(file));
+        when(accessControlService.hasPermission(any(), eq(Permission.File.READ))).thenReturn(true);
+        when(accessControlService.hasPermission(any(), eq(Permission.Admin.FORMATIONS))).thenReturn(false);
+        when(artisanRepository.findByUserEmailIgnoreCase(participantUser.getEmail())).thenReturn(Optional.of(participant));
+        when(formationEnrollmentRepository.existsByFormationIdAndArtisanIdAndStatus(
+                "formation", "attended-artisan", EnrollmentStatus.CONFIRMED)).thenReturn(false);
+        when(formationEnrollmentRepository.existsByFormationIdAndArtisanIdAndStatus(
+                "formation", "attended-artisan", EnrollmentStatus.ATTENDED)).thenReturn(true);
 
         assertThat(fileAccessService().authorize("syllabus")).isFalse();
     }

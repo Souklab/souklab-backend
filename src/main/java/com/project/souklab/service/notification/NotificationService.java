@@ -1,6 +1,7 @@
 package com.project.souklab.service.notification;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.ChatProperties;
+import com.project.souklab.config.NotificationProperties;
 import com.project.souklab.dao.NotificationRepository;
 import com.project.souklab.dao.UserRepository;
 import com.project.souklab.dao.UserNotificationPreferenceRepository;
@@ -39,23 +40,27 @@ public class NotificationService {
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final Clock clock;
-    private final AppProperties appProperties;
+    private final ChatProperties chatProperties;
+    private final NotificationProperties notificationProperties;
     private final UserNotificationPreferenceRepository preferenceRepository;
 
     public NotificationService(NotificationRepository notificationRepository, UserRepository userRepository,
-                                SimpMessagingTemplate messagingTemplate, Clock clock, AppProperties appProperties) {
-        this(notificationRepository, userRepository, messagingTemplate, clock, appProperties, null);
+                                SimpMessagingTemplate messagingTemplate, Clock clock,
+                                ChatProperties chatProperties, NotificationProperties notificationProperties) {
+        this(notificationRepository, userRepository, messagingTemplate, clock, chatProperties, notificationProperties, null);
     }
 
     @Autowired
     public NotificationService(NotificationRepository notificationRepository, UserRepository userRepository,
-                                SimpMessagingTemplate messagingTemplate, Clock clock, AppProperties appProperties,
+                                SimpMessagingTemplate messagingTemplate, Clock clock,
+                                ChatProperties chatProperties, NotificationProperties notificationProperties,
                                 UserNotificationPreferenceRepository preferenceRepository) {
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
         this.messagingTemplate = messagingTemplate;
         this.clock = clock;
-        this.appProperties = appProperties;
+        this.chatProperties = chatProperties;
+        this.notificationProperties = notificationProperties;
         this.preferenceRepository = preferenceRepository;
     }
 
@@ -324,7 +329,7 @@ public class NotificationService {
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
             TransactionSynchronizationManager.registerSynchronization(
                     new RealtimeNotificationAfterCommit(messagingTemplate, recipientEmail,
-                            appProperties.getChat().getNotificationDestination(), payload));
+                            chatProperties.getNotificationDestination(), payload));
         } else {
             sendRealtimePayload(recipientEmail, payload);
         }
@@ -332,14 +337,14 @@ public class NotificationService {
 
     private void sendRealtimePayload(String recipientEmail, NotificationResponseDTO payload) {
         try {
-            messagingTemplate.convertAndSendToUser(recipientEmail, appProperties.getChat().getNotificationDestination(), payload);
+            messagingTemplate.convertAndSendToUser(recipientEmail, chatProperties.getNotificationDestination(), payload);
         } catch (Exception ex) {
             log.warn("Failed to deliver real-time WebSocket notification to user '{}': {}", recipientEmail, ex.getMessage());
         }
     }
 
     private void validateMessageLength(String message) {
-        int maxMessageLength = appProperties.getNotification().getMaxMessageLength();
+        int maxMessageLength = notificationProperties.getMaxMessageLength();
         if (message != null && message.length() > maxMessageLength) {
             throw new BadRequestException("Notification message exceeds maximum allowed length of " + maxMessageLength + " characters.");
         }

@@ -52,17 +52,17 @@ class DataSeederTest {
     @Mock private EpoqueRepository epoqueRepository;
     @Mock private TechniqueRepository techniqueRepository;
 
-    private AppProperties appProperties;
+    private AdminProperties adminProperties;
     private DataSeeder dataSeeder;
 
     @BeforeEach
     void setUp() {
-        appProperties = new AppProperties();
-        appProperties.getAdmin().setBootstrapEnabled(true);
-        appProperties.getAdmin().setDefaultEmail(" Admin@Example.COM ");
-        appProperties.getAdmin().setDefaultPassword("initial-password");
+        adminProperties = new AdminProperties();
+        adminProperties.setBootstrapEnabled(true);
+        adminProperties.setDefaultEmail(" Admin@Example.COM ");
+        adminProperties.setDefaultPassword("initial-password");
         dataSeeder = new DataSeeder(userRepository, permissionRepository, passwordEncoder,
-                appProperties, emailUtil, Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC),
+                adminProperties, emailUtil, Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC),
                 regionRepository, jobCategoryRepository, jobSubCategoryRepository,
                 materialFamilyRepository, materialRepository, epoqueRepository, techniqueRepository);
 
@@ -101,13 +101,13 @@ class DataSeederTest {
 
     @Test
     void rejectsMissingAdministratorCredentials() {
-        appProperties.getAdmin().setDefaultEmail(" ");
+        adminProperties.setDefaultEmail(" ");
         assertThatThrownBy(() -> dataSeeder.run())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("APP_ADMIN_DEFAULT_EMAIL");
 
-        appProperties.getAdmin().setDefaultEmail("admin@example.com");
-        appProperties.getAdmin().setDefaultPassword(null);
+        adminProperties.setDefaultEmail("admin@example.com");
+        adminProperties.setDefaultPassword(null);
         when(userRepository.existsByEmail("admin@example.com")).thenReturn(false);
         assertThatThrownBy(() -> dataSeeder.run())
                 .isInstanceOf(IllegalStateException.class)

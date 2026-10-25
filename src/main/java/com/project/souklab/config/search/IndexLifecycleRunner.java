@@ -1,17 +1,16 @@
 package com.project.souklab.config.search;
 
-import org.springframework.boot.DefaultApplicationArguments;
-
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.SearchProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.boot.DefaultApplicationArguments;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
-import org.springframework.context.event.EventListener;
 
 /**
  * Startup lifecycle runner responsible for synchronizing database records into Elasticsearch.
@@ -26,19 +25,19 @@ import org.springframework.context.event.EventListener;
 @ConditionalOnProperty(name = "app.search.sync-on-startup", havingValue = "true", matchIfMissing = true)
 public class IndexLifecycleRunner implements ApplicationRunner {
 
-    private final AppProperties appProperties;
+    private final SearchProperties searchProperties;
     private final SearchIndexingService searchIndexingService;
 
     @Override
     public void run(ApplicationArguments args) {
-        if (!appProperties.getSearch().isSyncOnStartup()) {
+        if (!searchProperties.isSyncOnStartup()) {
             log.info("Hibernate Search startup mass indexing disabled via configuration.");
             return;
         }
 
         try {
             log.info("Initiating asynchronous Hibernate Search mass indexing for Artisan entity...");
-            AppProperties.Search.MassIndexing indexing = appProperties.getSearch().getMassIndexing();
+            SearchProperties.MassIndexing indexing = searchProperties.getMassIndexing();
             searchIndexingService.start(new SearchIndexingService.AppIndexingOptions(
                             indexing.getThreadsToLoadObjects(),
                             indexing.getBatchSizeToLoadObjects(),

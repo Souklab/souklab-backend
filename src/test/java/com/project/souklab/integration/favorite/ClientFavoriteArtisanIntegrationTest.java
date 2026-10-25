@@ -1,6 +1,6 @@
 package com.project.souklab.integration.favorite;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.FavoritesProperties;
 import com.project.souklab.dao.ArtisanRepository;
 import com.project.souklab.dao.ClientFavoriteArtisanRepository;
 import com.project.souklab.dao.ClientRepository;
@@ -93,7 +93,7 @@ class ClientFavoriteArtisanIntegrationTest {
     private ArtisanFavoriteService artisanFavoriteService;
 
     @Autowired
-    private AppProperties appProperties;
+    private FavoritesProperties favoritesProperties;
 
     @Autowired
     private TransactionTemplate transactionTemplate;
@@ -109,12 +109,12 @@ class ClientFavoriteArtisanIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        originalCap = appProperties.getFavorites().getMaxPerClient();
+        originalCap = favoritesProperties.getMaxPerClient();
     }
 
     @AfterEach
     void tearDown() {
-        appProperties.getFavorites().setMaxPerClient(originalCap);
+        favoritesProperties.setMaxPerClient(originalCap);
         SecurityContextHolder.clearContext();
 
         transactionTemplate.execute(status -> {
@@ -427,7 +427,7 @@ class ClientFavoriteArtisanIntegrationTest {
     @Test
     @DisplayName("Cap under concurrency: pessimistic lock restricts inserts to configured cap")
     void capUnderConcurrency_enforcesCapStrictly() throws InterruptedException {
-        appProperties.getFavorites().setMaxPerClient(2);
+        favoritesProperties.setMaxPerClient(2);
 
         User clientUser = createTestUser("client-cap", AccountStatus.ACTIVE);
         Client client = createTestClient(clientUser);

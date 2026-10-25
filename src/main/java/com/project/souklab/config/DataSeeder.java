@@ -49,7 +49,7 @@ public class DataSeeder implements CommandLineRunner {
     private final UserRepository userRepository;
     private final AuthorizationPermissionRepository permissionRepository;
     private final PasswordEncoder passwordEncoder;
-    private final AppProperties appProperties;
+    private final AdminProperties adminProperties;
     private final EmailUtil emailUtil;
     private final Clock clock;
     private final RegionRepository regionRepository;
@@ -64,7 +64,7 @@ public class DataSeeder implements CommandLineRunner {
     @Transactional
     public void run(String... args) {
         seedPermissions();
-        if (appProperties.getAdmin().isBootstrapEnabled()) {
+        if (adminProperties.isBootstrapEnabled()) {
             seedAdminUser();
         } else {
             log.info("Admin bootstrap is disabled; reference data seeding remains enabled");
@@ -89,7 +89,7 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private void seedAdminUser() {
-        String defaultEmail = appProperties.getAdmin().getDefaultEmail();
+        String defaultEmail = adminProperties.getDefaultEmail();
         if (defaultEmail == null || defaultEmail.isBlank()) {
             throw new IllegalStateException("APP_ADMIN_DEFAULT_EMAIL must be configured in the environment");
         }
@@ -101,7 +101,7 @@ public class DataSeeder implements CommandLineRunner {
 
         Set<AuthorizationPermission> adminPermissions = new HashSet<>(permissionRepository.findAll());
 
-        String defaultPassword = appProperties.getAdmin().getDefaultPassword();
+        String defaultPassword = adminProperties.getDefaultPassword();
         if (defaultPassword == null || defaultPassword.isBlank()) {
             throw new IllegalStateException("APP_ADMIN_DEFAULT_PASSWORD must be configured in the environment");
         }

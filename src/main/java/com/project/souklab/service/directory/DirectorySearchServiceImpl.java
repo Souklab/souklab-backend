@@ -1,8 +1,9 @@
 package com.project.souklab.service.directory;
 
 import com.project.souklab.analytics.AnalyticsMetric;
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.DirectoryProperties;
 import com.project.souklab.config.OperationalMetrics;
+import com.project.souklab.config.SearchProperties;
 import com.project.souklab.dao.ArtisanRepository;
 import com.project.souklab.dto.common.PaginatedResponse;
 import com.project.souklab.dto.directory.ArtisanDirectoryCardDTO;
@@ -68,27 +69,31 @@ public class DirectorySearchServiceImpl implements DirectorySearchService {
 
     private final EntityManager entityManager;
     private final ArtisanRepository artisanRepository;
-    private final AppProperties appProperties;
+    private final SearchProperties searchProperties;
+    private final DirectoryProperties directoryProperties;
     private final OperationalMetrics metrics;
     private final ViewerPremiumResolver viewerPremiumResolver;
 
     public DirectorySearchServiceImpl(EntityManager entityManager, ArtisanRepository artisanRepository,
-                                      AppProperties appProperties) {
-        this(entityManager, artisanRepository, appProperties, OperationalMetrics.noop(), null);
+                                      SearchProperties searchProperties, DirectoryProperties directoryProperties) {
+        this(entityManager, artisanRepository, searchProperties, directoryProperties, OperationalMetrics.noop(), null);
     }
 
     public DirectorySearchServiceImpl(EntityManager entityManager, ArtisanRepository artisanRepository,
-                                      AppProperties appProperties, OperationalMetrics metrics) {
-        this(entityManager, artisanRepository, appProperties, metrics, null);
+                                      SearchProperties searchProperties, DirectoryProperties directoryProperties,
+                                      OperationalMetrics metrics) {
+        this(entityManager, artisanRepository, searchProperties, directoryProperties, metrics, null);
     }
 
     @Autowired
     public DirectorySearchServiceImpl(EntityManager entityManager, ArtisanRepository artisanRepository,
-                                      AppProperties appProperties, OperationalMetrics metrics,
+                                      SearchProperties searchProperties, DirectoryProperties directoryProperties,
+                                      OperationalMetrics metrics,
                                       ViewerPremiumResolver viewerPremiumResolver) {
         this.entityManager = entityManager;
         this.artisanRepository = artisanRepository;
-        this.appProperties = appProperties;
+        this.searchProperties = searchProperties;
+        this.directoryProperties = directoryProperties;
         this.metrics = metrics;
         this.viewerPremiumResolver = viewerPremiumResolver;
     }
@@ -98,7 +103,7 @@ public class DirectorySearchServiceImpl implements DirectorySearchService {
     public PaginatedResponse<ArtisanDirectoryCardDTO> search(DirectorySearchFilterDTO filter) {
         boolean contactInfoLocked = viewerPremiumResolver != null && viewerPremiumResolver.isContactInfoLocked();
 
-        if (!appProperties.getSearch().isEnabled()) {
+        if (!searchProperties.isEnabled()) {
             metrics.recordSearch(AnalyticsMetric.Operational.Backend.RELATIONAL,
                     AnalyticsMetric.Operational.Outcome.DISABLED);
             log.info("Hibernate Search is disabled; routing directory search to relational JPA fallback.");
@@ -129,11 +134,11 @@ public class DirectorySearchServiceImpl implements DirectorySearchService {
     private PaginatedResponse<ArtisanDirectoryCardDTO> searchHibernateSearch(
             DirectorySearchFilterDTO filter, boolean contactInfoLocked) {
         SearchSession searchSession = Search.session(entityManager);
-        int page = Math.max(0, filter.resolvePage(appProperties.getDirectory().getDefaultPageIndex()));
+        int page = Math.max(0, filter.resolvePage(directoryProperties.getDefaultPageIndex()));
         int size = Math.max(1, filter.resolveSize(
-                appProperties.getDirectory().getDefaultPageSize(),
-                appProperties.getDirectory().getMinPageSize(),
-                appProperties.getDirectory().getMaxPageSize()));
+                directoryProperties.getDefaultPageSize(),
+                directoryProperties.getMinPageSize(),
+                directoryProperties.getMaxPageSize()));
         int offset = (int) Math.min((long) Integer.MAX_VALUE, (long) page * (long) size);
 
         SearchResult<Artisan> result = searchSession.search(Artisan.class)
@@ -319,11 +324,11 @@ public class DirectorySearchServiceImpl implements DirectorySearchService {
         Specification<Artisan> spec = buildRelationalSpecification(filter);
         Sort sort = buildRelationalSort(filter);
         Pageable pageable = PageRequest.of(
-                filter.resolvePage(appProperties.getDirectory().getDefaultPageIndex()),
+                filter.resolvePage(directoryProperties.getDefaultPageIndex()),
                 filter.resolveSize(
-                        appProperties.getDirectory().getDefaultPageSize(),
-                        appProperties.getDirectory().getMinPageSize(),
-                        appProperties.getDirectory().getMaxPageSize()),
+                        directoryProperties.getDefaultPageSize(),
+                        directoryProperties.getMinPageSize(),
+                        directoryProperties.getMaxPageSize()),
                 sort);
 
         Page<Artisan> page = artisanRepository.findAll(spec, pageable);

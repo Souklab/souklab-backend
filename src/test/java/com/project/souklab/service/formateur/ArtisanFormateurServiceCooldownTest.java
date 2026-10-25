@@ -1,7 +1,6 @@
 package com.project.souklab.service.formateur;
 import com.project.souklab.security.Permission;
-
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.ArtisanProperties;
 import com.project.souklab.dao.ArtisanFormateurRequestRepository;
 import com.project.souklab.dao.ArtisanRepository;
 import com.project.souklab.dao.UserRepository;
@@ -112,9 +111,9 @@ class ArtisanFormateurServiceCooldownTest {
         adminUser.setId("admin-user-1");
     }
 
-    private AppProperties configuredProperties() {
-        AppProperties properties = new AppProperties();
-        properties.getArtisan().getFormateur().setReapplyCooldownDays(14);
+    private ArtisanProperties configuredProperties() {
+        ArtisanProperties properties = new ArtisanProperties();
+        properties.getFormateur().setReapplyCooldownDays(14);
         return properties;
     }
 

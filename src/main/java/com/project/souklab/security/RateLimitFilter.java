@@ -1,7 +1,7 @@
 package com.project.souklab.security;
 
 import com.project.souklab.analytics.AnalyticsMetric;
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.RateLimitProperties;
 import com.project.souklab.config.RateLimitEndpointProperties;
 import com.project.souklab.config.RateLimitRule;
 import com.project.souklab.config.OperationalMetrics;
@@ -26,32 +26,31 @@ import java.io.IOException;
 public class RateLimitFilter extends OncePerRequestFilter {
 
     private final ServletResponseUtil servletResponseUtil;
-    private final AppProperties appProperties;
+    private final RateLimitProperties rateLimitProperties;
     private final RateLimitBucketStore bucketStore;
     private RateLimitEndpointProperties endpointProperties;
     private OperationalMetrics metrics = OperationalMetrics.noop();
 
-    public RateLimitFilter(ServletResponseUtil servletResponseUtil, AppProperties appProperties) {
-        this(servletResponseUtil, appProperties, RateLimitBucketStore.inMemory());
+    public RateLimitFilter(ServletResponseUtil servletResponseUtil, RateLimitProperties rateLimitProperties) {
+        this(servletResponseUtil, rateLimitProperties, RateLimitBucketStore.inMemory());
     }
 
     @Autowired
-    public RateLimitFilter(ServletResponseUtil servletResponseUtil, AppProperties appProperties,
+    public RateLimitFilter(ServletResponseUtil servletResponseUtil, RateLimitProperties rateLimitProperties,
                            RateLimitBucketStore bucketStore) {
         this.servletResponseUtil = servletResponseUtil;
-        this.appProperties = appProperties;
+        this.rateLimitProperties = rateLimitProperties;
         this.bucketStore = bucketStore;
     }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return appProperties.getRateLimit() == null || !appProperties.getRateLimit().isEnabled();
+        return rateLimitProperties == null || !rateLimitProperties.isEnabled();
     }
 
     public Bucket resolveBucket(String ip) {
-        AppProperties.RateLimit config = appProperties.getRateLimit();
-        if (config == null) throw new IllegalStateException("Rate-limit configuration is unavailable");
-        return bucketStore.resolve("api:" + ip, config.getCapacity(), config.getRefillDuration());
+        if (rateLimitProperties == null) throw new IllegalStateException("Rate-limit configuration is unavailable");
+        return bucketStore.resolve("api:" + ip, rateLimitProperties.getCapacity(), rateLimitProperties.getRefillDuration());
     }
 
     @Autowired(required = false)

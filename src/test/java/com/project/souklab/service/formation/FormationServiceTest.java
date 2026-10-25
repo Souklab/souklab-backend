@@ -1,8 +1,8 @@
 package com.project.souklab.service.formation;
 import com.project.souklab.exception.ResourceNotFoundException;
 import com.project.souklab.security.Permission;
-
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.AppStorageProperties;
+import com.project.souklab.config.FormationProperties;
 import com.project.souklab.dao.ArtisanRepository;
 import com.project.souklab.dao.FormationEnrollmentRepository;
 import com.project.souklab.dao.FormationFileRepository;
@@ -129,7 +129,10 @@ import static org.mockito.Mockito.when;
     private NotificationService notificationService;
 
     @Spy
-    private AppProperties appProperties = new AppProperties();
+    private FormationProperties formationProperties = new FormationProperties();
+
+    @Spy
+    private AppStorageProperties appStorageProperties = new AppStorageProperties();
 
     @Spy
     private Clock clock = Clock.systemUTC();
@@ -144,13 +147,13 @@ import static org.mockito.Mockito.when;
 
     @BeforeEach
     void setUp() {
-        appProperties.getStorage().setFileServingPrefix("/api/v1/files/");
-        appProperties.getFormation().setDefaultCurrency("DZD");
-        appProperties.getFormation().getFile().setMaxCount(10);
-        appProperties.getFormation().getFile().setMaxFileSize(DataSize.ofMegabytes(25));
-        appProperties.getFormation().getFile().setAllowedMimeTypes(List.of("application/pdf", "image/jpeg", "image/png"));
-        appProperties.getFormation().getThumbnail().setMaxFileSize(DataSize.ofMegabytes(10));
-        appProperties.getFormation().getThumbnail().setAllowedMimeTypes(List.of("image/jpeg", "image/png"));
+        appStorageProperties.setFileServingPrefix("/api/v1/files/");
+        formationProperties.setDefaultCurrency("DZD");
+        formationProperties.getFile().setMaxCount(10);
+        formationProperties.getFile().setMaxFileSize(DataSize.ofMegabytes(25));
+        formationProperties.getFile().setAllowedMimeTypes(List.of("application/pdf", "image/jpeg", "image/png"));
+        formationProperties.getThumbnail().setMaxFileSize(DataSize.ofMegabytes(10));
+        formationProperties.getThumbnail().setAllowedMimeTypes(List.of("image/jpeg", "image/png"));
         lenient().when(fileUrlResolver.toStorageKey(any(String.class))).thenAnswer(invocation -> invocation.getArgument(0, String.class).replace("/api/v1/files/", ""));
         testUser = User.builder()
                 .email(ARTISAN_EMAIL)

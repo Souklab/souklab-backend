@@ -1,6 +1,6 @@
 package com.project.souklab.filestorage;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.AppStorageProperties;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -8,8 +8,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 class FileUrlResolverTest {
     @Test
     void convertsKeysAndRejectsUnsafeOrUnknownUrls() {
-        AppProperties properties = new AppProperties();
-        properties.getStorage().setFileServingPrefix("/files");
+        AppStorageProperties properties = new AppStorageProperties();
+        properties.setFileServingPrefix("/files");
         FileUrlResolver resolver = new FileUrlResolver(properties);
 
         assertThat(resolver.getPrefix()).isEqualTo("/files/");

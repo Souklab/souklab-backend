@@ -3,7 +3,39 @@ package com.project.souklab.controller.support;
 import tools.jackson.databind.json.JsonMapper;
 import com.project.souklab.dto.common.ApiResponse;
 import jakarta.servlet.http.HttpServletResponse;
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.AdminProperties;
+import com.project.souklab.config.AnalyticsExportProperties;
+import com.project.souklab.config.AnalyticsJobProperties;
+import com.project.souklab.config.AnalyticsProperties;
+import com.project.souklab.config.AnalyticsRabbitProperties;
+import com.project.souklab.config.AnalyticsRetentionProperties;
+import com.project.souklab.config.AppStorageProperties;
+import com.project.souklab.config.ArtisanProperties;
+import com.project.souklab.config.AsyncProperties;
+import com.project.souklab.config.AuthProperties;
+import com.project.souklab.config.AvatarProperties;
+import com.project.souklab.config.CacheProperties;
+import com.project.souklab.config.ChargilyProperties;
+import com.project.souklab.config.ChatProperties;
+import com.project.souklab.config.CorsProperties;
+import com.project.souklab.config.DirectoryProperties;
+import com.project.souklab.config.EmailProperties;
+import com.project.souklab.config.FavoritesProperties;
+import com.project.souklab.config.FeedProperties;
+import com.project.souklab.config.FormationProperties;
+import com.project.souklab.config.HealthProperties;
+import com.project.souklab.config.JwtProperties;
+import com.project.souklab.config.MailerSendProperties;
+import com.project.souklab.config.NotificationProperties;
+import com.project.souklab.config.OAuthProperties;
+import com.project.souklab.config.OpenApiProperties;
+import com.project.souklab.config.RateLimitEndpointProperties;
+import com.project.souklab.config.RateLimitProperties;
+import com.project.souklab.config.RelayProperties;
+import com.project.souklab.config.SearchProperties;
+import com.project.souklab.config.SubscriptionProperties;
+import com.project.souklab.config.SupportProperties;
+import com.project.souklab.filestorage.config.StorageProperties;
 import com.project.souklab.security.AccessControlService;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -25,7 +57,41 @@ import org.springframework.security.web.SecurityFilterChain;
 @TestConfiguration
 @EnableWebSecurity
 @EnableMethodSecurity
-@EnableConfigurationProperties(AppProperties.class)
+@EnableConfigurationProperties({
+        AdminProperties.class,
+        AnalyticsExportProperties.class,
+        AnalyticsJobProperties.class,
+        AnalyticsProperties.class,
+        AnalyticsRabbitProperties.class,
+        AnalyticsRetentionProperties.class,
+        AppStorageProperties.class,
+        ArtisanProperties.class,
+        AsyncProperties.class,
+        AuthProperties.class,
+        AvatarProperties.class,
+        CacheProperties.class,
+        ChargilyProperties.class,
+        ChatProperties.class,
+        CorsProperties.class,
+        DirectoryProperties.class,
+        EmailProperties.class,
+        FavoritesProperties.class,
+        FeedProperties.class,
+        FormationProperties.class,
+        HealthProperties.class,
+        JwtProperties.class,
+        MailerSendProperties.class,
+        NotificationProperties.class,
+        OAuthProperties.class,
+        OpenApiProperties.class,
+        RateLimitEndpointProperties.class,
+        RateLimitProperties.class,
+        RelayProperties.class,
+        SearchProperties.class,
+        StorageProperties.class,
+        SubscriptionProperties.class,
+        SupportProperties.class
+})
 @Import(AccessControlService.class)
 public class ControllerSliceSecurityConfig {
 

@@ -1,9 +1,10 @@
 package com.project.souklab.util;
 
-import org.mockito.ArgumentCaptor;
-
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.EmailProperties;
+import com.project.souklab.config.MailerSendProperties;
+import com.project.souklab.config.SupportProperties;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.web.client.RestClientException;
@@ -14,14 +15,15 @@ import java.time.LocalDateTime;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 class EmailUtilTest {
+
     @Test
     void sendsAllSmtpNotificationsWithExpectedRecipientsAndSubjects() {
         JavaMailSender sender = mock(JavaMailSender.class);
-        AppProperties properties = properties(true);
-        EmailUtil email = new EmailUtil(sender, properties, mock(RestTemplate.class));
+        EmailUtil email = new EmailUtil(sender, emailProperties(true), supportProperties(), mailerSendProperties(), mock(RestTemplate.class));
 
         email.sendVerificationCode("verify@test", "123");
         email.sendPasswordResetCode("reset@test", "456");
@@ -51,7 +53,7 @@ class EmailUtilTest {
     void suppressesSmtpFailures() {
         JavaMailSender sender = mock(JavaMailSender.class);
         doThrow(new IllegalStateException("mail unavailable")).when(sender).send(any(SimpleMailMessage.class));
-        EmailUtil email = new EmailUtil(sender, properties(true), mock(RestTemplate.class));
+        EmailUtil email = new EmailUtil(sender, emailProperties(true), supportProperties(), mailerSendProperties(), mock(RestTemplate.class));
 
         email.sendVerificationCode("to@test", "code");
         email.sendPasswordResetCode("to@test", "code");
@@ -64,10 +66,9 @@ class EmailUtilTest {
 
     @Test
     void sendsViaMailerSendAndSuppressesClientAndUnexpectedFailures() {
-        AppProperties properties = properties(false);
         RestTemplate rest = mock(RestTemplate.class);
         {
-            EmailUtil email = new EmailUtil(mock(JavaMailSender.class), properties, rest);
+            EmailUtil email = new EmailUtil(mock(JavaMailSender.class), emailProperties(false), supportProperties(), mailerSendProperties(), rest);
             when(rest.postForEntity(any(String.class), any(), eq(String.class))).thenReturn(null);
 
             email.sendVerificationCode("to@test", "code");
@@ -100,10 +101,9 @@ class EmailUtilTest {
 
     @Test
     void suppressesBothMailerSendFailureCategoriesAcrossAllEmailFlows() {
-        AppProperties properties = properties(false);
         RestTemplate rest = mock(RestTemplate.class);
         {
-            EmailUtil email = new EmailUtil(mock(JavaMailSender.class), properties, rest);
+            EmailUtil email = new EmailUtil(mock(JavaMailSender.class), emailProperties(false), supportProperties(), mailerSendProperties(), rest);
 
             when(rest.postForEntity(any(String.class), any(), eq(String.class)))
                     .thenThrow(new RestClientException("provider unavailable"));
@@ -128,7 +128,7 @@ class EmailUtilTest {
     void sendVerificationCodeSynchronous_propagatesSmtpFailure() {
         JavaMailSender sender = mock(JavaMailSender.class);
         doThrow(new IllegalStateException("mail unavailable")).when(sender).send(any(SimpleMailMessage.class));
-        EmailUtil email = new EmailUtil(sender, properties(true), mock(RestTemplate.class));
+        EmailUtil email = new EmailUtil(sender, emailProperties(true), supportProperties(), mailerSendProperties(), mock(RestTemplate.class));
 
         assertThatThrownBy(() -> email.sendVerificationCodeSynchronous("to@test", "code"))
                 .isInstanceOf(IllegalStateException.class)
@@ -137,9 +137,8 @@ class EmailUtilTest {
 
     @Test
     void sendVerificationCodeSynchronous_sendsViaMailerSendAndPropagatesFailure() {
-        AppProperties properties = properties(false);
         RestTemplate rest = mock(RestTemplate.class);
-        EmailUtil email = new EmailUtil(mock(JavaMailSender.class), properties, rest);
+        EmailUtil email = new EmailUtil(mock(JavaMailSender.class), emailProperties(false), supportProperties(), mailerSendProperties(), rest);
 
         email.sendVerificationCodeSynchronous("to@test", "code");
         verify(rest).postForEntity(eq("https://mailer.test/send"), any(), eq(String.class));
@@ -154,31 +153,81 @@ class EmailUtilTest {
     @Test
     void fallsBackToSenderEmailOrNoreplyWhenSupportEmailNotConfigured() {
         JavaMailSender sender = mock(JavaMailSender.class);
-        AppProperties properties = new AppProperties();
-        properties.getEmail().setUseSmtp(true);
-        properties.getMailersend().setSenderEmail("mailer@test");
-        EmailUtil email = new EmailUtil(sender, properties, mock(RestTemplate.class));
+        EmailProperties emailProps = new EmailProperties();
+        emailProps.setUseSmtp(true);
+        SupportProperties supportProps = new SupportProperties();
+        MailerSendProperties mailerSendProps = new MailerSendProperties();
+        mailerSendProps.setSenderEmail("mailer@test");
+        EmailUtil email = new EmailUtil(sender, emailProps, supportProps, mailerSendProps, mock(RestTemplate.class));
 
         email.sendVerificationCode("user@test", "123");
         var captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
         verify(sender).send(captor.capture());
         assertThat(captor.getValue().getFrom()).isEqualTo("mailer@test");
 
-        properties.getMailersend().setSenderEmail(null);
+        mailerSendProps.setSenderEmail(null);
         var secondCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
         email.sendVerificationCode("user2@test", "456");
         verify(sender, times(2)).send(secondCaptor.capture());
         assertThat(secondCaptor.getValue().getFrom()).isEqualTo("noreply@souklab.dz");
     }
 
-    private AppProperties properties(boolean smtp) {
-        AppProperties properties = new AppProperties();
-        properties.getEmail().setUseSmtp(smtp);
-        properties.getSupport().setEmail("support@souklab.dz");
-        properties.getMailersend().setApiKey("api-key");
-        properties.getMailersend().setApiUrl("https://mailer.test/send");
-        properties.getMailersend().setSenderEmail("sender@test");
-        properties.getMailersend().setSenderName("Souklab");
+    @Test
+    void usesEmailFromAddressWhenConfigured() {
+        JavaMailSender sender = mock(JavaMailSender.class);
+        EmailProperties emailProps = emailProperties(true);
+        emailProps.setFrom("testingemailjavawalid@gmail.com");
+        EmailUtil email = new EmailUtil(sender, emailProps, supportProperties(), mailerSendProperties(), mock(RestTemplate.class));
+
+        email.sendVerificationCode("user@test", "123");
+        var captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(sender).send(captor.capture());
+        assertThat(captor.getValue().getFrom()).isEqualTo("testingemailjavawalid@gmail.com");
+    }
+
+    @Test
+    void trimsFromAddressAndRecipientWhenConfiguredWithWhitespace() {
+        JavaMailSender sender = mock(JavaMailSender.class);
+        EmailProperties emailProps = emailProperties(true);
+        emailProps.setFrom("  testingemailjavawalid@gmail.com  ");
+        EmailUtil email = new EmailUtil(sender, emailProps, supportProperties(), mailerSendProperties(), mock(RestTemplate.class));
+
+        email.sendVerificationCode("  user@test  ", "123");
+        var captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(sender).send(captor.capture());
+        assertThat(captor.getValue().getFrom()).isEqualTo("testingemailjavawalid@gmail.com");
+        assertThat(captor.getValue().getTo()).containsExactly("user@test");
+    }
+
+    @Test
+    void handlesNullEmailConfigSafely() {
+        JavaMailSender sender = mock(JavaMailSender.class);
+        RestTemplate rest = mock(RestTemplate.class);
+        EmailUtil email = new EmailUtil(sender, null, supportProperties(), mailerSendProperties(), rest);
+
+        email.sendVerificationCode("user@test", "123");
+        verify(rest).postForEntity(eq("https://mailer.test/send"), any(), eq(String.class));
+        verify(sender, never()).send(any(SimpleMailMessage.class));
+    }
+
+    private EmailProperties emailProperties(boolean smtp) {
+        EmailProperties properties = new EmailProperties();
+        properties.setUseSmtp(smtp);
+        return properties;
+    }
+
+    private SupportProperties supportProperties() {
+        SupportProperties properties = new SupportProperties();
+        properties.setEmail("support@souklab.dz");
+        return properties;
+    }
+
+    private MailerSendProperties mailerSendProperties() {
+        MailerSendProperties properties = new MailerSendProperties();
+        properties.setApiKey("api-key");
+        properties.setApiUrl("https://mailer.test/send");
+        properties.setSenderEmail("sender@test");
+        properties.setSenderName("Souklab");
         return properties;
     }
 }

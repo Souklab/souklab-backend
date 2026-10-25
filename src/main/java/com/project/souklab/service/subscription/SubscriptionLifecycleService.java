@@ -7,7 +7,7 @@ import com.project.souklab.analytics.AnalyticsEvent;
 import com.project.souklab.analytics.AnalyticsMetadata;
 
 import com.project.souklab.analytics.ActivityEventService;
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.SubscriptionProperties;
 import com.project.souklab.dao.ArtisanSubscriptionRepository;
 import com.project.souklab.dao.ClientSubscriptionRepository;
 import com.project.souklab.dao.PaymentRepository;
@@ -42,7 +42,7 @@ public class SubscriptionLifecycleService {
     private final ClientSubscriptionRepository clientSubscriptions;
     private final NotificationService notificationService;
     private final PaymentWebhookLogRepository webhookLogs;
-    private final AppProperties appProperties;
+    private final SubscriptionProperties subscriptionProperties;
     private final Clock clock;
     private ActivityEventService activityEventService;
 
@@ -52,9 +52,9 @@ public class SubscriptionLifecycleService {
     @Scheduled(fixedDelayString = "${app.subscription.lifecycle-interval}")
     @Transactional
     public void processLifecycle() {
-        LocalDateTime now = LocalDateTime.now(clock.withZone(ZoneId.of(appProperties.getSubscription().getLifecycleTimeZone())));
+        LocalDateTime now = LocalDateTime.now(clock.withZone(ZoneId.of(subscriptionProperties.getLifecycleTimeZone())));
         expirePendingPayments(now);
-        PageRequest batch = PageRequest.of(0, appProperties.getSubscription().getLifecycleBatchSize());
+        PageRequest batch = PageRequest.of(0, subscriptionProperties.getLifecycleBatchSize());
         artisanSubscriptions.findByStatusAndExpiresAtBefore(SubscriptionStatus.ACTIVE, now, batch).forEach(this::expire);
         clientSubscriptions.findByStatusAndExpiresAtBefore(SubscriptionStatus.ACTIVE, now, batch).forEach(this::expire);
         sendReminders(now);
@@ -63,8 +63,8 @@ public class SubscriptionLifecycleService {
     }
 
     private void releaseStaleWebhookClaims(LocalDateTime now) {
-        LocalDateTime cutoff = now.minus(appProperties.getSubscription().getLifecycleInterval());
-        PageRequest batch = PageRequest.of(0, appProperties.getSubscription().getLifecycleBatchSize());
+        LocalDateTime cutoff = now.minus(subscriptionProperties.getLifecycleInterval());
+        PageRequest batch = PageRequest.of(0, subscriptionProperties.getLifecycleBatchSize());
         webhookLogs.findByStatusAndUpdatedAtBefore(WebhookProcessingStatus.PROCESSING, cutoff, batch).forEach(log -> {
             log.setStatus(WebhookProcessingStatus.FAILED);
             log.setFailureReason("Stale webhook processing claim released");
@@ -72,16 +72,16 @@ public class SubscriptionLifecycleService {
     }
 
     private void releaseExpiredWebhookLogs(LocalDateTime now) {
-        LocalDateTime cutoff = now.minus(appProperties.getSubscription().getWebhookRetention());
-        int batchSize = appProperties.getSubscription().getLifecycleBatchSize();
+        LocalDateTime cutoff = now.minus(subscriptionProperties.getWebhookRetention());
+        int batchSize = subscriptionProperties.getLifecycleBatchSize();
         for (PaymentWebhookLog log : webhookLogs.findByCreatedAtBefore(cutoff, PageRequest.of(0, batchSize))) {
             webhookLogs.delete(log);
         }
     }
 
     private void expirePendingPayments(LocalDateTime now) {
-        int batchSize = appProperties.getSubscription().getLifecycleBatchSize();
-        LocalDateTime cutoff = now.minus(appProperties.getSubscription().getCheckoutIdempotencyRetention());
+        int batchSize = subscriptionProperties.getLifecycleBatchSize();
+        LocalDateTime cutoff = now.minus(subscriptionProperties.getCheckoutIdempotencyRetention());
         for (Payment payment : paymentRepository.findByStatusOrderByCreatedAtAsc(PaymentStatus.PENDING, PageRequest.of(0, batchSize))) {
             if (payment.getCreatedAt() != null && payment.getCreatedAt().isBefore(cutoff)) {
                 payment.setStatus(PaymentStatus.EXPIRED);
@@ -127,8 +127,8 @@ public class SubscriptionLifecycleService {
     }
 
     private void sendReminders(LocalDateTime now) {
-        appProperties.getSubscription().getReminderOffsets().forEach(offset -> {
-            PageRequest batch = PageRequest.of(0, appProperties.getSubscription().getLifecycleBatchSize());
+        subscriptionProperties.getReminderOffsets().forEach(offset -> {
+            PageRequest batch = PageRequest.of(0, subscriptionProperties.getLifecycleBatchSize());
             artisanSubscriptions.findByStatusAndExpiresAtAfterAndExpiresAtBefore(SubscriptionStatus.ACTIVE, now, now.plusDays(offset), batch).forEach(value -> remind(value, offset, now));
             clientSubscriptions.findByStatusAndExpiresAtAfterAndExpiresAtBefore(SubscriptionStatus.ACTIVE, now, now.plusDays(offset), batch).forEach(value -> remind(value, offset, now));
         });

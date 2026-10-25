@@ -13,11 +13,11 @@ import java.util.concurrent.Executor;
 @RequiredArgsConstructor
 public class AsyncConfig {
 
-    private final AppProperties appProperties;
+    private final AsyncProperties asyncProperties;
 
     @Bean(name = "applicationTaskExecutor")
     public Executor applicationTaskExecutor() {
-        AppProperties.Async.Executor properties = appProperties.getAsync().getApplication();
+        AsyncProperties.Executor properties = asyncProperties.getApplication();
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(properties.getCorePoolSize());
         executor.setMaxPoolSize(properties.getMaxPoolSize());
@@ -29,7 +29,7 @@ public class AsyncConfig {
 
     @Bean(name = "workflowProcessorExecutor")
     public Executor workflowProcessorExecutor() {
-        AppProperties.Async.Executor properties = appProperties.getAsync().getWorkflow();
+        AsyncProperties.Executor properties = asyncProperties.getWorkflow();
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(properties.getCorePoolSize());
         executor.setMaxPoolSize(properties.getMaxPoolSize());

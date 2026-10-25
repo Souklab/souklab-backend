@@ -1,8 +1,8 @@
 package com.project.souklab.service.artisan;
 import com.project.souklab.filestorage.exception.StorageException;
 import com.project.souklab.security.Permission;
-
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.AppStorageProperties;
+import com.project.souklab.config.ArtisanProperties;
 import com.project.souklab.dao.ArtisanGalleryImageRepository;
 import com.project.souklab.dao.ArtisanRepository;
 import com.project.souklab.dto.artisan.GalleryImageResponseDTO;
@@ -96,7 +96,10 @@ class ArtisanGalleryServiceTest {
     private FileUrlResolver fileUrlResolver;
 
     @Spy
-    private AppProperties appProperties = new AppProperties();
+    private ArtisanProperties artisanProperties = new ArtisanProperties();
+
+    @Spy
+    private AppStorageProperties appStorageProperties = new AppStorageProperties();
 
     @Spy
     private Clock clock = Clock.systemUTC();
@@ -109,10 +112,10 @@ class ArtisanGalleryServiceTest {
 
     @BeforeEach
     void setUp() {
-        appProperties.getStorage().setFileServingPrefix("/api/v1/files/");
-        appProperties.getArtisan().getGallery().setMaxImages(20);
-        appProperties.getArtisan().getGallery().setMaxFileSize(DataSize.ofMegabytes(10));
-        appProperties.getArtisan().getGallery().setAllowedMimeTypes(List.of("image/jpeg", "image/png"));
+        appStorageProperties.setFileServingPrefix("/api/v1/files/");
+        artisanProperties.getGallery().setMaxImages(20);
+        artisanProperties.getGallery().setMaxFileSize(DataSize.ofMegabytes(10));
+        artisanProperties.getGallery().setAllowedMimeTypes(List.of("image/jpeg", "image/png"));
         lenient().when(fileUrlResolver.toStorageKey(anyString())).thenAnswer(invocation -> invocation.getArgument(0, String.class).replace("/api/v1/files/", ""));
         testUser = User.builder()
                 .email(ARTISAN_EMAIL)
@@ -286,7 +289,7 @@ class ArtisanGalleryServiceTest {
         @DisplayName("uploadImage_whenCustomQuotaConfigured_shouldRespectCustomQuota")
         void uploadImage_whenCustomQuotaConfigured_shouldRespectCustomQuota() {
             authenticateArtisan();
-            appProperties.getArtisan().getGallery().setMaxImages(5);
+            artisanProperties.getGallery().setMaxImages(5);
 
             MockMultipartFile file = new MockMultipartFile(
                     "file", "photo.jpg", "image/jpeg", "content".getBytes()
@@ -309,7 +312,7 @@ class ArtisanGalleryServiceTest {
         @DisplayName("uploadImage_whenCustomMaxFileSizeConfigured_shouldRespectCustomLimit")
         void uploadImage_whenCustomMaxFileSizeConfigured_shouldRespectCustomLimit() {
             authenticateArtisan();
-            appProperties.getArtisan().getGallery().setMaxFileSize(DataSize.ofMegabytes(2));
+            artisanProperties.getGallery().setMaxFileSize(DataSize.ofMegabytes(2));
 
             long oversized = (2L * 1024 * 1024) + 1024;
             MockMultipartFile largeFile = new MockMultipartFile(

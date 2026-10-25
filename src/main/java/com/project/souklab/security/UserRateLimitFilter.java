@@ -3,7 +3,7 @@ package com.project.souklab.security;
 import com.project.souklab.analytics.AnalyticsMetric;
 import java.time.Duration;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.RateLimitProperties;
 import com.project.souklab.config.OperationalMetrics;
 import com.project.souklab.config.RateLimitEndpointProperties;
 import com.project.souklab.config.RateLimitRule;
@@ -31,12 +31,12 @@ import java.io.IOException;
 @Component
 public class UserRateLimitFilter extends OncePerRequestFilter {
     private final ServletResponseUtil responses;
-    private final AppProperties properties;
+    private final RateLimitProperties properties;
     private final RateLimitBucketStore store;
     private RateLimitEndpointProperties endpointProperties;
     private OperationalMetrics metrics = OperationalMetrics.noop();
 
-    public UserRateLimitFilter(ServletResponseUtil responses, AppProperties properties, RateLimitBucketStore store) {
+    public UserRateLimitFilter(ServletResponseUtil responses, RateLimitProperties properties, RateLimitBucketStore store) {
         this.responses = responses;
         this.properties = properties;
         this.store = store;
@@ -44,7 +44,7 @@ public class UserRateLimitFilter extends OncePerRequestFilter {
 
     @Autowired
     public UserRateLimitFilter(ObjectProvider<ServletResponseUtil> responses,
-                               AppProperties properties, ObjectProvider<RateLimitBucketStore> store) {
+                               RateLimitProperties properties, ObjectProvider<RateLimitBucketStore> store) {
         this(responses.getIfAvailable(), properties,
                 store.getIfAvailable(RateLimitBucketStore::inMemory));
     }
@@ -59,15 +59,14 @@ public class UserRateLimitFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return properties.getRateLimit() == null
-                || !properties.getRateLimit().isUserEnabled()
+        return properties == null
+                || !properties.isUserEnabled()
                 || SecurityContextHolder.getContext().getAuthentication() == null;
     }
 
     public Bucket resolveBucket(String username) {
-        AppProperties.RateLimit limit = properties.getRateLimit();
-        if (limit == null) throw new IllegalStateException("Rate-limit configuration is unavailable");
-        return store.resolve("user:" + username, limit.getUserCapacity(), limit.getUserRefillDuration());
+        if (properties == null) throw new IllegalStateException("Rate-limit configuration is unavailable");
+        return store.resolve("user:" + username, properties.getUserCapacity(), properties.getUserRefillDuration());
     }
 
     @Override
@@ -81,7 +80,7 @@ public class UserRateLimitFilter extends OncePerRequestFilter {
                 chain.doFilter(request, response);
                 return;
             }
-            AppProperties.RateLimit global = properties.getRateLimit();
+            RateLimitProperties global = properties;
             int capacity = rule != null && rule.getUserCapacity() > 0
                     ? rule.getUserCapacity() : global.getUserCapacity();
             Duration refill = rule != null && rule.getUserRefillDuration() != null

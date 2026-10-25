@@ -1,6 +1,6 @@
 package com.project.souklab.security;
 
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.OAuthProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,21 +21,17 @@ import static org.mockito.Mockito.when;
 class OAuth2AuthenticationFailureHandlerTest {
 
     @Mock
-    private AppProperties appProperties;
+    private OAuthProperties oAuthProperties;
 
     @Mock
-    private AppProperties.OAuth oauth;
-
-    @Mock
-    private AppProperties.OAuth.Google google;
+    private OAuthProperties.Google google;
 
     private OAuth2AuthenticationFailureHandler failureHandler;
 
     @BeforeEach
     void setUp() {
-        failureHandler = new OAuth2AuthenticationFailureHandler(appProperties);
-        when(appProperties.getOauth()).thenReturn(oauth);
-        when(oauth.getGoogle()).thenReturn(google);
+        failureHandler = new OAuth2AuthenticationFailureHandler(oAuthProperties);
+        when(oAuthProperties.getGoogle()).thenReturn(google);
         when(google.getAuthorizedRedirectUri()).thenReturn("https://souklab.dz/auth/google/callback");
     }
 

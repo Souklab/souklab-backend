@@ -1,7 +1,8 @@
 package com.project.souklab.service.subscription;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.ChargilyProperties;
+import com.project.souklab.config.SubscriptionProperties;
 import com.project.souklab.dao.ArtisanSubscriptionRepository;
 import com.project.souklab.dao.ClientSubscriptionRepository;
 import com.project.souklab.dao.PaymentRepository;
@@ -52,12 +53,15 @@ class ChargilyWebhookServiceTest {
 
     @BeforeEach
     void setUp() {
-        AppProperties properties = new AppProperties();
+        ChargilyProperties chargilyProperties = new ChargilyProperties();
         secret = "webhook-secret".getBytes(StandardCharsets.UTF_8);
-        properties.getChargily().setSecretKey(new String(secret, StandardCharsets.UTF_8));
-        properties.getChargily().setWebhookEncryptionKey(Base64.getEncoder().encodeToString(new byte[32]));
-        properties.getSubscription().setWebhookRetention(Duration.ofDays(90));
-        properties.getSubscription().setLifecycleInterval(Duration.ofHours(1));
+        chargilyProperties.setSecretKey(new String(secret, StandardCharsets.UTF_8));
+        chargilyProperties.setWebhookEncryptionKey(Base64.getEncoder().encodeToString(new byte[32]));
+
+        SubscriptionProperties subscriptionProperties = new SubscriptionProperties();
+        subscriptionProperties.setWebhookRetention(Duration.ofDays(90));
+        subscriptionProperties.setLifecycleInterval(Duration.ofHours(1));
+
         Clock clock = Clock.fixed(Instant.parse("2026-09-18T00:00:00Z"), ZoneOffset.UTC);
         logRepository = mock(PaymentWebhookLogRepository.class);
         paymentRepository = mock(PaymentRepository.class);
@@ -65,10 +69,10 @@ class ChargilyWebhookServiceTest {
         claimService = mock(WebhookEventClaimService.class);
         auditLogService = mock(AuditLogService.class);
         service = new ChargilyWebhookService(
-                new ObjectMapper(), new WebhookSecurityService(properties), logRepository,
+                new ObjectMapper(), new WebhookSecurityService(chargilyProperties), logRepository,
                 paymentRepository, mock(ArtisanSubscriptionRepository.class),
                 clientSubscriptionRepository, mock(SubscriptionPlanRules.class),
-                mock(NotificationService.class), claimService, properties, clock,
+                mock(NotificationService.class), claimService, subscriptionProperties, clock,
                 auditLogService);
     }
 
@@ -152,18 +156,19 @@ class ChargilyWebhookServiceTest {
     void skipsActivationAndCancelsDuplicateWhenActiveSubscriptionAlreadyExists() throws Exception {
         ArtisanSubscriptionRepository artisanRepo = mock(ArtisanSubscriptionRepository.class);
 
-        AppProperties properties = new AppProperties();
-        properties.getChargily().setSecretKey(new String(secret, StandardCharsets.UTF_8));
-        properties.getChargily().setWebhookEncryptionKey(Base64.getEncoder().encodeToString(new byte[32]));
-        properties.getSubscription().setWebhookRetention(Duration.ofDays(90));
-        properties.getSubscription().setLifecycleInterval(Duration.ofHours(1));
+        ChargilyProperties chargilyProperties = new ChargilyProperties();
+        chargilyProperties.setSecretKey(new String(secret, StandardCharsets.UTF_8));
+        chargilyProperties.setWebhookEncryptionKey(Base64.getEncoder().encodeToString(new byte[32]));
+        SubscriptionProperties subscriptionProperties = new SubscriptionProperties();
+        subscriptionProperties.setWebhookRetention(Duration.ofDays(90));
+        subscriptionProperties.setLifecycleInterval(Duration.ofHours(1));
         Clock clock = Clock.fixed(Instant.parse("2026-09-18T00:00:00Z"), ZoneOffset.UTC);
 
         SubscriptionPlanRules rules = mock(SubscriptionPlanRules.class);
         ChargilyWebhookService svc = new ChargilyWebhookService(
-                new ObjectMapper(), new WebhookSecurityService(properties), logRepository,
+                new ObjectMapper(), new WebhookSecurityService(chargilyProperties), logRepository,
                 paymentRepository, artisanRepo, mock(ClientSubscriptionRepository.class),
-                rules, mock(NotificationService.class), claimService, properties, clock,
+                rules, mock(NotificationService.class), claimService, subscriptionProperties, clock,
                 auditLogService);
 
         byte[] body = ("{\"id\":\"evt-6\",\"type\":\"checkout.paid\",\"created_at\":"

@@ -32,28 +32,28 @@ class ConfigurationPolicyValidatorTest {
         assertInvalid(f -> f.avatar.setAllowedMimeTypes(List.of(" ")), "avatar.allowed-mime-types");
         assertInvalid(f -> f.storage.getValidation().setMaxFileSize(DataSize.ofBytes(0)), "storage.validation.max-file-size");
         assertInvalid(f -> f.storage.getValidation().setAllowedMimeTypes(List.of()), "storage.validation.allowed-mime-types");
-        assertInvalid(f -> f.app.getCors().setAllowedOrigins(List.of("*")), "app.cors.allowed-origins");
+        assertInvalid(f -> f.cors.setAllowedOrigins(List.of("*")), "app.cors.allowed-origins");
     }
 
     @Test
     void validatesRateLimitAsyncCacheAndIndexPolicies() {
         assertInvalid(f -> { f.avatar.getRateLimit().setEnabled(true); f.avatar.getRateLimit().setCapacity(0); }, "avatar.rate-limit.capacity");
         assertInvalid(f -> { f.avatar.getRateLimit().setEnabled(true); f.avatar.getRateLimit().setCapacity(1); f.avatar.getRateLimit().setRefillDuration(Duration.ZERO); }, "refill-duration");
-        assertInvalid(f -> f.app.getAsync().getApplication().setCorePoolSize(0), "app.async.application");
-        assertInvalid(f -> f.app.getCache().setMaximumSize(0), "app.cache");
-        assertInvalid(f -> f.app.getSearch().getMassIndexing().setIdFetchSize(0), "mass-indexing");
+        assertInvalid(f -> f.async.getApplication().setCorePoolSize(0), "app.async.application");
+        assertInvalid(f -> f.cache.setMaximumSize(0), "app.cache");
+        assertInvalid(f -> f.search.getMassIndexing().setIdFetchSize(0), "mass-indexing");
     }
 
     @Test
     void rejectsRemainingRateLimitAndExecutorVariants() {
         assertInvalid(f -> { f.avatar.getRateLimit().setEnabled(true); f.avatar.getRateLimit().setCapacity(1); f.avatar.getRateLimit().setRefillDuration(Duration.ofSeconds(-1)); }, "refill-duration");
         assertInvalid(f -> { f.avatar.getRateLimit().setEnabled(true); f.avatar.getRateLimit().setCapacity(1); f.avatar.getRateLimit().setRefillDuration(null); }, "refill-duration");
-        assertInvalid(f -> f.app.getAsync().getApplication().setMaxPoolSize(0), "app.async.application");
-        assertInvalid(f -> f.app.getAsync().getApplication().setCorePoolSize(3), "app.async.application");
-        assertInvalid(f -> f.app.getAsync().getApplication().setQueueCapacity(0), "app.async.application");
-        assertInvalid(f -> f.app.getAsync().getApplication().setThreadNamePrefix(" "), "app.async.application");
-        assertInvalid(f -> f.app.getAsync().setWorkflow(null), "app.async.workflow");
-        assertInvalid(f -> f.app.getAsync().getWorkflow().setThreadNamePrefix(null), "app.async.workflow");
+        assertInvalid(f -> f.async.getApplication().setMaxPoolSize(0), "app.async.application");
+        assertInvalid(f -> f.async.getApplication().setCorePoolSize(3), "app.async.application");
+        assertInvalid(f -> f.async.getApplication().setQueueCapacity(0), "app.async.application");
+        assertInvalid(f -> f.async.getApplication().setThreadNamePrefix(" "), "app.async.application");
+        assertInvalid(f -> f.async.setWorkflow(null), "app.async.workflow");
+        assertInvalid(f -> f.async.getWorkflow().setThreadNamePrefix(null), "app.async.workflow");
     }
 
     @Test
@@ -120,40 +120,40 @@ class ConfigurationPolicyValidatorTest {
     @Test
     void rejectsMissingAndMalformedNestedPolicies() {
         assertInvalid(f -> f.storage.setValidation(null), "storage.validation.max-file-size");
-        assertInvalid(f -> f.app.setAsync(null), "app.async");
-        assertInvalid(f -> f.app.getCache().setExpireAfterWrite(null), "app.cache");
-        assertInvalid(f -> f.app.getSearch().setMassIndexing(null), "mass-indexing");
-        assertInvalid(f -> f.app.getCors().setAllowedOrigins(List.of(" ")), "app.cors.allowed-origins");
-        assertInvalid(f -> f.app.getCors().setAllowedOrigins(new ArrayList<>(Collections.singletonList(null))), "app.cors.allowed-origins");
-        assertInvalid(f -> f.app.getCors().setAllowedOrigins(List.of()), "app.cors.allowed-origins");
-        assertInvalid(f -> f.app.getSearch().getMassIndexing().setThreadsToLoadObjects(-1), "mass-indexing");
-        assertInvalid(f -> f.app.getSearch().getMassIndexing().setBatchSizeToLoadObjects(-1), "mass-indexing");
-        assertInvalid(f -> f.app.getCache().setExpireAfterWrite(Duration.ofSeconds(-1)), "app.cache");
-        assertInvalid(f -> f.app.setDirectory(null), "app.directory");
-        assertInvalid(f -> f.app.getDirectory().setDefaultPageIndex(-1), "app.directory");
-        assertInvalid(f -> f.app.getDirectory().setDefaultPageSize(0), "app.directory");
-        assertInvalid(f -> f.app.getDirectory().setMaxPageSize(0), "app.directory");
-        assertInvalid(f -> f.app.getCors().setAllowedOrigins(null), "app.cors.allowed-origins");
-        assertInvalid(f -> f.app.getAsync().setApplication(null), "app.async.application");
-        assertInvalid(f -> f.app.getAsync().setWorkflow(null), "app.async.workflow");
-        assertInvalid(f -> f.app.setCache(null), "app.cache");
-        assertInvalid(f -> f.app.getSearch().getMassIndexing().setThreadsToLoadObjects(0), "mass-indexing");
-        assertInvalid(f -> f.app.getSearch().getMassIndexing().setBatchSizeToLoadObjects(0), "mass-indexing");
-        assertInvalid(f -> f.app.getSearch().getMassIndexing().setIdFetchSize(-1), "mass-indexing");
-        assertInvalid(f -> f.app.getDirectory().setDefaultPageSize(0), "app.directory");
-        assertInvalid(f -> { f.app.getDirectory().setMinPageSize(10); f.app.getDirectory().setDefaultPageSize(5); }, "app.directory");
-        assertInvalid(f -> { f.app.getDirectory().setMinPageSize(10); f.app.getDirectory().setMaxPageSize(5); }, "app.directory");
+        assertInvalid(f -> f.async = null, "app.async");
+        assertInvalid(f -> f.cache.setExpireAfterWrite(null), "app.cache");
+        assertInvalid(f -> f.search.setMassIndexing(null), "mass-indexing");
+        assertInvalid(f -> f.cors.setAllowedOrigins(List.of(" ")), "app.cors.allowed-origins");
+        assertInvalid(f -> f.cors.setAllowedOrigins(new ArrayList<>(Collections.singletonList(null))), "app.cors.allowed-origins");
+        assertInvalid(f -> f.cors.setAllowedOrigins(List.of()), "app.cors.allowed-origins");
+        assertInvalid(f -> f.search.getMassIndexing().setThreadsToLoadObjects(-1), "mass-indexing");
+        assertInvalid(f -> f.search.getMassIndexing().setBatchSizeToLoadObjects(-1), "mass-indexing");
+        assertInvalid(f -> f.cache.setExpireAfterWrite(Duration.ofSeconds(-1)), "app.cache");
+        assertInvalid(f -> f.directory = null, "app.directory");
+        assertInvalid(f -> f.directory.setDefaultPageIndex(-1), "app.directory");
+        assertInvalid(f -> f.directory.setDefaultPageSize(0), "app.directory");
+        assertInvalid(f -> f.directory.setMaxPageSize(0), "app.directory");
+        assertInvalid(f -> f.cors.setAllowedOrigins(null), "app.cors.allowed-origins");
+        assertInvalid(f -> f.async.setApplication(null), "app.async.application");
+        assertInvalid(f -> f.async.setWorkflow(null), "app.async.workflow");
+        assertInvalid(f -> f.cache = null, "app.cache");
+        assertInvalid(f -> f.search.getMassIndexing().setThreadsToLoadObjects(0), "mass-indexing");
+        assertInvalid(f -> f.search.getMassIndexing().setBatchSizeToLoadObjects(0), "mass-indexing");
+        assertInvalid(f -> f.search.getMassIndexing().setIdFetchSize(-1), "mass-indexing");
+        assertInvalid(f -> f.directory.setDefaultPageSize(0), "app.directory");
+        assertInvalid(f -> { f.directory.setMinPageSize(10); f.directory.setDefaultPageSize(5); }, "app.directory");
+        assertInvalid(f -> { f.directory.setMinPageSize(10); f.directory.setMaxPageSize(5); }, "app.directory");
     }
 
     @Test
     void rejectsInvalidFavoritesPolicy() {
-        assertInvalid(f -> f.app.getFavorites().setMaxPerClient(0), "app.favorites.max-per-client");
+        assertInvalid(f -> f.favorites.setMaxPerClient(0), "app.favorites.max-per-client");
     }
 
     @Test
     void rejectsMissingFileServingPrefix() {
         Fixture fixture = new Fixture();
-        fixture.app.getStorage().setFileServingPrefix(null);
+        fixture.appStorage.setFileServingPrefix(null);
 
         assertThatThrownBy(() -> fixture.validator.validate())
                 .hasMessage("app.storage.file-serving-prefix must be configured");
@@ -188,7 +188,8 @@ class ConfigurationPolicyValidatorTest {
         chargily.setRequestBodyLimit(65536);
         chargily.setCurrency("DZD");
         chargily.setWebhookEncryptionKey(Base64.getEncoder().encodeToString(new byte[32]));
-        fixture.app.setChargily(chargily);
+        fixture.chargily = chargily;
+        fixture.rebuildValidator();
 
         when(fixture.environment.matchesProfiles("prod", "production")).thenReturn(false);
         assertThatCode(() -> fixture.validator.validate()).doesNotThrowAnyException();
@@ -201,41 +202,63 @@ class ConfigurationPolicyValidatorTest {
     private void assertInvalid(Consumer<Fixture> change, String message) {
         Fixture fixture = new Fixture();
         change.accept(fixture);
+        fixture.rebuildValidator();
         assertThatThrownBy(() -> fixture.validator.validate()).hasMessageContaining(message);
     }
 
     private static final class Fixture {
-        final AppProperties app = new AppProperties();
-        final AvatarProperties avatar = new AvatarProperties();
-        final StorageProperties storage = new StorageProperties();
-        final Environment environment = mock(Environment.class);
-        final ConfigurationPolicyValidator validator;
+        RateLimitProperties rateLimit = new RateLimitProperties();
+        AppStorageProperties appStorage = new AppStorageProperties();
+        CorsProperties cors = new CorsProperties();
+        AsyncProperties async = new AsyncProperties();
+        CacheProperties cache = new CacheProperties();
+        SearchProperties search = new SearchProperties();
+        DirectoryProperties directory = new DirectoryProperties();
+        FavoritesProperties favorites = new FavoritesProperties();
+        SubscriptionProperties subscription = new SubscriptionProperties();
+        ChargilyProperties chargily = new ChargilyProperties();
+        MailerSendProperties mailerSend = new MailerSendProperties();
+        RelayProperties relay = new RelayProperties();
+        AvatarProperties avatar = new AvatarProperties();
+        StorageProperties storage = new StorageProperties();
+        Environment environment = mock(Environment.class);
+        ConfigurationPolicyValidator validator;
 
         Fixture() {
             avatar.setMaxPerUser(3);
             avatar.setAllowedMimeTypes(List.of("image/jpeg"));
             storage.getValidation().setMaxFileSize(DataSize.ofMegabytes(1));
             storage.getValidation().setAllowedMimeTypes(List.of("image/jpeg"));
-            app.getCors().setAllowedOrigins(List.of("http://localhost"));
-            app.getStorage().setFileServingPrefix("/api/v1/files/");
-            configureExecutor(app.getAsync().getApplication());
-            configureExecutor(app.getAsync().getWorkflow());
-            app.getCache().setMaximumSize(10); app.getCache().setExpireAfterWrite(Duration.ofMinutes(1));
-            app.getSearch().getMassIndexing().setThreadsToLoadObjects(1);
-            app.getSearch().getMassIndexing().setBatchSizeToLoadObjects(1);
-            app.getSearch().getMassIndexing().setIdFetchSize(1);
-            app.getDirectory().setDefaultPageIndex(0);
-            app.getDirectory().setDefaultPageSize(20);
-            app.getDirectory().setMinPageSize(1);
-            app.getDirectory().setMaxPageSize(100);
-            app.getFavorites().setMaxPerClient(500);
+            cors.setAllowedOrigins(List.of("http://localhost"));
+            appStorage.setFileServingPrefix("/api/v1/files/");
+            configureExecutor(async.getApplication());
+            configureExecutor(async.getWorkflow());
+            cache.setMaximumSize(10);
+            cache.setExpireAfterWrite(Duration.ofMinutes(1));
+            search.getMassIndexing().setThreadsToLoadObjects(1);
+            search.getMassIndexing().setBatchSizeToLoadObjects(1);
+            search.getMassIndexing().setIdFetchSize(1);
+            directory.setDefaultPageIndex(0);
+            directory.setDefaultPageSize(20);
+            directory.setMinPageSize(1);
+            directory.setMaxPageSize(100);
+            favorites.setMaxPerClient(500);
             when(environment.matchesProfiles("prod", "production")).thenReturn(false);
-            validator = new ConfigurationPolicyValidator(app, avatar, storage, environment);
+            rebuildValidator();
         }
 
-        private void configureExecutor(AppProperties.Async.Executor executor) {
-            executor.setCorePoolSize(1); executor.setMaxPoolSize(2);
-            executor.setQueueCapacity(10); executor.setThreadNamePrefix("test-");
+        void rebuildValidator() {
+            validator = new ConfigurationPolicyValidator(
+                    rateLimit, appStorage, cors, async, cache, search, directory,
+                    favorites, subscription, chargily, mailerSend, relay,
+                    avatar, storage, environment);
+        }
+
+        private void configureExecutor(AsyncProperties.Executor executor) {
+            executor.setCorePoolSize(1);
+            executor.setMaxPoolSize(2);
+            executor.setQueueCapacity(10);
+            executor.setThreadNamePrefix("test-");
         }
     }
 }

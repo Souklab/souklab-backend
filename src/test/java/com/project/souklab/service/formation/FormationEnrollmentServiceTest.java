@@ -1,7 +1,6 @@
 package com.project.souklab.service.formation;
 import com.project.souklab.security.Permission;
-
-import com.project.souklab.config.AppProperties;
+import com.project.souklab.config.FormationProperties;
 import com.project.souklab.dao.ArtisanRepository;
 import com.project.souklab.dao.FormationEnrollmentRepository;
 import com.project.souklab.dao.FormationFileRepository;
@@ -89,7 +88,7 @@ class FormationEnrollmentServiceTest {
     private StorageService storageService;
 
     @Spy
-    private AppProperties appProperties = new AppProperties();
+    private FormationProperties formationProperties = new FormationProperties();
 
     @Spy
     private Clock clock = Clock.systemDefaultZone();
@@ -106,8 +105,8 @@ class FormationEnrollmentServiceTest {
 
     @BeforeEach
     void setUp() {
-        appProperties.getFormation().getCancellation().setDeadlineHours(24);
-        appProperties.getFormation().getPagination().setDefaultPageSize(10);
+        formationProperties.getCancellation().setDeadlineHours(24);
+        formationProperties.getPagination().setDefaultPageSize(10);
         instructorUser = User.builder()
                 .email(INSTRUCTOR_EMAIL)
                 .firstName("Karim")
@@ -262,6 +261,31 @@ class FormationEnrollmentServiceTest {
                     .thenReturn(true);
             when(formationEnrollmentRepository.countByFormationIdAndStatus(FORMATION_ID, EnrollmentStatus.CONFIRMED))
                     .thenReturn(4L);
+            when(formationFileRepository.findByFormationIdAndDeletedAtIsNull(FORMATION_ID))
+                    .thenReturn(List.of(courseFile));
+
+            FormationPublicViewDTO result = formationEnrollmentService.getPublishedFormationDetails(FORMATION_ID);
+
+            assertThat(result).isNotNull();
+            assertThat(result.isEnrolled()).isTrue();
+            assertThat(result.getFiles()).hasSize(1);
+            assertThat(result.getFiles().get(0).getDownloadUrl()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("getPublishedFormationDetails_whenAttendedPeerViewsCompletedFormation_shouldPopulateDownloadUrls")
+        void getPublishedFormationDetails_whenAttendedPeerViewsCompletedFormation_shouldPopulateDownloadUrls() {
+            authenticateArtisan(peerArtisan);
+            publishedFormation.setStatus(FormationStatus.COMPLETED);
+
+            when(formationRepository.findByIdAndDeletedAtIsNull(FORMATION_ID))
+                    .thenReturn(Optional.of(publishedFormation));
+            when(formationEnrollmentRepository.existsByFormationIdAndArtisanIdAndStatus(FORMATION_ID, PEER_ID, EnrollmentStatus.CONFIRMED))
+                    .thenReturn(false);
+            when(formationEnrollmentRepository.existsByFormationIdAndArtisanIdAndStatus(FORMATION_ID, PEER_ID, EnrollmentStatus.ATTENDED))
+                    .thenReturn(true);
+            when(formationEnrollmentRepository.countByFormationIdAndStatus(FORMATION_ID, EnrollmentStatus.CONFIRMED))
+                    .thenReturn(0L);
             when(formationFileRepository.findByFormationIdAndDeletedAtIsNull(FORMATION_ID))
                     .thenReturn(List.of(courseFile));
 
@@ -604,6 +628,36 @@ class FormationEnrollmentServiceTest {
             when(formationFileRepository.findByIdAndFormationIdAndDeletedAtIsNull(FILE_ID, FORMATION_ID))
                     .thenReturn(Optional.of(courseFile));
             when(formationEnrollmentRepository.existsByFormationIdAndArtisanIdAndStatus(FORMATION_ID, PEER_ID, EnrollmentStatus.CONFIRMED))
+                    .thenReturn(true);
+
+            StorageResource mockResource = new StorageResource(
+                    courseFile.getStorageKey(),
+                    new ByteArrayInputStream("pdf content".getBytes()),
+                    courseFile.getContentType(),
+                    courseFile.getFileSize(),
+                    courseFile.getOriginalFilename()
+            );
+            when(storageService.load(courseFile.getStorageKey())).thenReturn(mockResource);
+
+            StorageResource result = formationEnrollmentService.downloadCourseFile(FORMATION_ID, FILE_ID);
+
+            assertThat(result).isNotNull();
+            assertThat(result.key()).isEqualTo(courseFile.getStorageKey());
+            assertThat(result.contentType()).isEqualTo("application/pdf");
+        }
+
+        @Test
+        @DisplayName("downloadCourseFile_whenAttendedParticipant_shouldReturnStorageResource")
+        void downloadCourseFile_whenAttendedParticipant_shouldReturnStorageResource() {
+            authenticateArtisan(peerArtisan);
+
+            when(formationRepository.findByIdAndDeletedAtIsNull(FORMATION_ID))
+                    .thenReturn(Optional.of(publishedFormation));
+            when(formationFileRepository.findByIdAndFormationIdAndDeletedAtIsNull(FILE_ID, FORMATION_ID))
+                    .thenReturn(Optional.of(courseFile));
+            when(formationEnrollmentRepository.existsByFormationIdAndArtisanIdAndStatus(FORMATION_ID, PEER_ID, EnrollmentStatus.CONFIRMED))
+                    .thenReturn(false);
+            when(formationEnrollmentRepository.existsByFormationIdAndArtisanIdAndStatus(FORMATION_ID, PEER_ID, EnrollmentStatus.ATTENDED))
                     .thenReturn(true);
 
             StorageResource mockResource = new StorageResource(

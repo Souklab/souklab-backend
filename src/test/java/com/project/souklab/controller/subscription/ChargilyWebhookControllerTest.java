@@ -1,6 +1,5 @@
 package com.project.souklab.controller.subscription;
 
-import com.project.souklab.config.AppProperties;
 import com.project.souklab.config.ChargilyProperties;
 import com.project.souklab.controller.support.ControllerSliceTest;
 import com.project.souklab.service.subscription.ChargilyWebhookService;
@@ -27,13 +26,11 @@ class ChargilyWebhookControllerTest {
     private ChargilyWebhookService webhookService;
 
     @MockitoBean
-    private AppProperties appProperties;
+    private ChargilyProperties chargilyProperties;
 
     @Test
     void webhookIsPublicAndProcessesRawBody() throws Exception {
-        ChargilyProperties chargily = new ChargilyProperties();
-        chargily.setRequestBodyLimit(1024);
-        when(appProperties.getChargily()).thenReturn(chargily);
+        when(chargilyProperties.getRequestBodyLimit()).thenReturn(1024);
 
         mockMvc.perform(post("/api/v1/integrations/chargily/webhook")
                         .header("signature", "valid")
@@ -46,9 +43,7 @@ class ChargilyWebhookControllerTest {
 
     @Test
     void invalidSignatureReturnsForbidden() throws Exception {
-        ChargilyProperties chargily = new ChargilyProperties();
-        chargily.setRequestBodyLimit(1024);
-        when(appProperties.getChargily()).thenReturn(chargily);
+        when(chargilyProperties.getRequestBodyLimit()).thenReturn(1024);
         doThrow(new InvalidWebhookSignatureException()).when(webhookService).process(any(byte[].class), anyString());
 
         mockMvc.perform(post("/api/v1/integrations/chargily/webhook")
