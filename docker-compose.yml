@@ -16,6 +16,14 @@ services:
     restart: unless-stopped
     env_file:
       - .env.docker
+    environment:
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_AUTH: ${SMTP_AUTH:-true}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
+      SMTP_CONNECTION_TIMEOUT: ${SMTP_CONNECTION_TIMEOUT:-5000}
+      SMTP_READ_TIMEOUT: ${SMTP_READ_TIMEOUT:-10000}
+      SMTP_WRITE_TIMEOUT: ${SMTP_WRITE_TIMEOUT:-10000}
     ports:
       - "${PORT:-8080}:8080"
     depends_on:

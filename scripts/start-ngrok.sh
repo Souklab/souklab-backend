@@ -22,7 +22,7 @@ if [ "$MODE" = "docker" ]; then
     echo "Waiting for ngrok tunnel to be established..."
     sleep 3
 
-    TUNNEL_URL=$(curl -s http://localhost:4040/api/tunnels | grep -o 'https://[^"]*\.ngrok-free\.app' | head -n 1 || true)
+    TUNNEL_URL=$(curl -s http://localhost:4040/api/tunnels | grep -o 'https://[^"]*\.ngrok[^"]*' | head -n 1 || true)
     if [ -n "$TUNNEL_URL" ]; then
         echo ""
         echo "===================================================================="
