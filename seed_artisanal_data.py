@@ -2,18 +2,35 @@
 """
 Souklab Full Artisanal Platform Seeder
 Seeds rich, authentic Algerian artisanal data and high-quality real images into Souklab.
+- Forces IPv4 for robust Wikimedia Commons image downloads
+- All 10 Algerian master artisans fully seeded with avatars, gallery portfolios, CAM certifications, and formateur accreditations
+- Seeds 10 completed masterclasses with peer enrollments and verified 5-star reviews (giving all artisans 5.0 rating)
+- Seeds 10 upcoming published masterclasses across all crafts for a vibrant catalog (/formations)
+- Seeds 10 authentic social feed posts with multi-image photo attachments (/fil)
+- Cleans orphaned records from test runs to keep admin moderation queues clean
+- Seeds client accounts and favorites
+- Re-indexes Elasticsearch
 """
 
 import json
 import mimetypes
 import os
 import re
+import socket
 import sys
 import time
 import urllib.parse
 import urllib.request
 import subprocess
 from datetime import datetime, timedelta
+
+# Force IPv4 in socket.getaddrinfo to prevent [Errno 101] Network is unreachable on dual-stack hosts
+_orig_getaddrinfo = socket.getaddrinfo
+def _ipv4_getaddrinfo(*args, **kwargs):
+    res = _orig_getaddrinfo(*args, **kwargs)
+    ipv4_res = [r for r in res if r[0] == socket.AF_INET]
+    return ipv4_res if ipv4_res else res
+socket.getaddrinfo = _ipv4_getaddrinfo
 
 API_BASE = "http://localhost:8080/api/v1"
 MAILPIT_API = "http://localhost:8025/api/v1"
@@ -31,21 +48,6 @@ WIKIMEDIA_UA = "SouklabPlatform/1.0 (https://souklab.dz; contact@souklab.dz)"
 def log(msg):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}", flush=True)
 
-def resolve_wikimedia_url(file_title):
-    api_url = f"https://commons.wikimedia.org/w/api.php?action=query&titles={urllib.parse.quote(file_title)}&prop=imageinfo&iiprop=url&format=json"
-    req = urllib.request.Request(api_url, headers={"User-Agent": WIKIMEDIA_UA})
-    for attempt in range(3):
-        try:
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-                pages = data.get("query", {}).get("pages", {})
-                for pid, page in pages.items():
-                    if "imageinfo" in page:
-                        return page["imageinfo"][0]["url"]
-        except Exception as e:
-            time.sleep(1)
-    return None
-
 def download_image(url, filename, is_wiki=False):
     target = os.path.join(IMAGES_DIR, filename)
     if os.path.exists(target) and os.path.getsize(target) > 5000:
@@ -55,7 +57,7 @@ def download_image(url, filename, is_wiki=False):
     for attempt in range(4):
         try:
             req = urllib.request.Request(url, headers=headers)
-            with urllib.request.urlopen(req, timeout=15) as resp:
+            with urllib.request.urlopen(req, timeout=20) as resp:
                 content = resp.read()
                 if len(content) > 3000:
                     with open(target, "wb") as f:
@@ -89,7 +91,7 @@ def api_call(method, endpoint, token=None, json_body=None):
 
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
     try:
-        with urllib.request.urlopen(req, timeout=20) as resp:
+        with urllib.request.urlopen(req, timeout=25) as resp:
             status = resp.getcode()
             body_text = resp.read().decode("utf-8")
             res_json = json.loads(body_text) if body_text else None
@@ -145,7 +147,6 @@ def upload_multipart(endpoint, token, file_path, field_name="file", query_params
             res_json = json.loads(body_text)
         except Exception:
             pass
-        log(f"Upload failed {endpoint}: {e.code} - {body_text}")
         return e.code, res_json
 
 def get_mailpit_otp(email):
@@ -191,6 +192,10 @@ def db_scalar(sql):
         return lines[1]
     return None
 
+def in_days(days, hour=9):
+    dt = datetime.now() + timedelta(days=days)
+    return dt.replace(hour=hour, minute=0, second=0, microsecond=0).strftime("%Y-%m-%dT%H:%M:%S")
+
 # --- 1. DOWNLOAD IMAGES ---
 log("Starting download of real authentic artisanal images...")
 
@@ -209,52 +214,41 @@ IMAGE_SPECS = [
     ("avatar_sarah_client.jpg", "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&q=80", False),
     ("avatar_walid_client.jpg", "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=500&q=80", False),
     
-    # Pottery
-    ("pottery_1.jpg", "https://upload.wikimedia.org/wikipedia/commons/5/50/Kabyle_pottery_1.jpg", True),
+    # Authentic Wikimedia Commons Algerian Craft Images
+    ("pottery_1.jpg", "https://commons.wikimedia.org/wiki/Special:FilePath/Kabyle_pottery_1.jpg", True),
+    ("clothing_1.jpg", "https://commons.wikimedia.org/wiki/Special:FilePath/Algerian_Karakou.jpg", True),
+    ("zellige_1.jpg", "https://commons.wikimedia.org/wiki/Special:FilePath/Plaque_d%C3%A9corative_de_Zellige%2C_Tlemcen.jpg", True),
+    ("jewelry_1.jpg", "https://commons.wikimedia.org/wiki/Special:FilePath/Bijoux_traditionnels_de_Kabylie.JPG", True),
+    ("copper_1.jpg", "https://commons.wikimedia.org/wiki/Special:FilePath/Artisans_du_cuivre.jpg", True),
+    ("earth_1.jpg", "https://commons.wikimedia.org/wiki/Special:FilePath/Ksar_Beni_Isguen_2.jpg", True),
+    ("wood_1.jpg", "https://commons.wikimedia.org/wiki/Special:FilePath/Balustrade_bois_Casbah_Alger.jpg", True),
+    ("stone_1.jpg", "https://commons.wikimedia.org/wiki/Special:FilePath/Ruines_romaines_de_Tipaza.jpg", True),
+    ("carpet_1.jpg", "https://commons.wikimedia.org/wiki/Special:FilePath/Tisserande_de_Tapis_5.jpg", True),
+    ("leather_1.jpg", "https://commons.wikimedia.org/wiki/Special:FilePath/Balgha_Algerie.jpg", True),
+    ("jewelry_beni_yenni.jpg", "https://commons.wikimedia.org/wiki/Special:FilePath/Bijoux_kabyles_tabzimit.jpg", True),
+    ("jewelry_tabzimt.jpg", "https://commons.wikimedia.org/wiki/Special:FilePath/Tabzimt_kabyle.jpg", True),
+
+    # Complementary Craft Photos (Unsplash)
     ("pottery_2.jpg", "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=900&q=80", False),
     ("pottery_3.jpg", "https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=900&q=80", False),
     ("pottery_4.jpg", "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=900&q=80", False),
     ("pottery_5.jpg", "https://images.unsplash.com/photo-1590736969955-71cc94801759?w=900&q=80", False),
-    
-    # Copperware
-    ("copper_1.jpg", "https://images.unsplash.com/photo-1596178065887-1198b6148b2b?w=900&q=80", False),
     ("copper_2.jpg", "https://images.unsplash.com/photo-1541123437800-1bb1317badc2?w=900&q=80", False),
     ("copper_3.jpg", "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=900&q=80", False),
     ("copper_4.jpg", "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=900&q=80", False),
-    
-    # Clothing / Embroidery / Karakou
-    ("clothing_1.jpg", "https://upload.wikimedia.org/wikipedia/commons/e/ea/Algerian_Karakou.jpg", True),
     ("clothing_2.jpg", "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=900&q=80", False),
     ("clothing_3.jpg", "https://images.unsplash.com/photo-1600121848594-d8644e57abab?w=900&q=80", False),
     ("clothing_4.jpg", "https://images.unsplash.com/photo-1606760227091-3dd870d97f1d?w=900&q=80", False),
-    
-    # Zellige
-    ("zellige_1.jpg", "https://upload.wikimedia.org/wikipedia/commons/1/10/Plaque_d%C3%A9corative_de_Zellige%2C_Tlemcen.jpg", True),
     ("zellige_2.jpg", "https://images.unsplash.com/photo-1548013146-72479768bada?w=900&q=80", False),
     ("zellige_3.jpg", "https://images.unsplash.com/photo-1564507592333-c60657eea523?w=900&q=80", False),
-    
-    # Jewelry
-    ("jewelry_1.jpg", "https://upload.wikimedia.org/wikipedia/commons/1/1e/Bijoux_kabyles_tabzimit.jpg", True),
     ("jewelry_2.jpg", "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=900&q=80", False),
     ("jewelry_3.jpg", "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=900&q=80", False),
     ("jewelry_4.jpg", "https://images.unsplash.com/photo-1601121141461-9d6647bca1ed?w=900&q=80", False),
-    
-    # Earth / Pise
-    ("earth_1.jpg", "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=900&q=80", False),
     ("earth_2.jpg", "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?w=900&q=80", False),
-    
-    # Leather
-    ("leather_1.jpg", "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=900&q=80", False),
     ("leather_2.jpg", "https://images.unsplash.com/photo-1544816155-12df9643f363?w=900&q=80", False),
     ("leather_3.jpg", "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=900&q=80", False),
-    
-    # Woodworking
-    ("wood_1.jpg", "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=900&q=80", False),
     ("wood_2.jpg", "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=900&q=80", False),
     ("wood_3.jpg", "https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=900&q=80", False),
-    
-    # Stone Masonry
-    ("stone_1.jpg", "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=900&q=80", False),
     ("stone_2.jpg", "https://images.unsplash.com/photo-1582560475093-ba66accbc424?w=900&q=80", False),
 ]
 
@@ -276,7 +270,57 @@ if os.path.isdir(landing_dir):
             with open(src, "rb") as rf, open(dst, "wb") as wf:
                 wf.write(rf.read())
 
+# --- 1.5 CLEAN ORPHANED CLUTTER FROM DATABASE ---
+log("Cleaning orphaned test records from database...")
+run_db_query("""
+    UPDATE formations SET deleted_at = NOW() 
+    WHERE author_id IN (SELECT id FROM users WHERE deleted_at IS NOT NULL) 
+       OR title LIKE '%Curl%' OR title LIKE '%Traditional Pottery Workshop%';
+       
+    UPDATE feed_posts SET deleted_at = NOW() 
+    WHERE author_id IN (SELECT id FROM users WHERE deleted_at IS NOT NULL) 
+       OR author_id IN (SELECT id FROM users WHERE email LIKE '%@demo.souklab.test')
+       OR title LIKE '%Curl%' OR title = 'jsp';
+       
+    UPDATE artisan_gallery_images SET deleted_at = NOW() 
+    WHERE artisan_id IN (SELECT id FROM users WHERE deleted_at IS NOT NULL)
+       OR image_url LIKE '%.png'
+       OR image_url IN (
+           '/api/v1/files/b26ba6ac-490c-4e75-9f93-9fe60c4765b7.jpg',
+           '/api/v1/files/d78575df-d3a4-4c2a-9e30-1d18633c453b.jpg',
+           '/api/v1/files/7bdff8f9-f1a6-434f-bb18-041690fd6661.jpg',
+           '/api/v1/files/f1297ffd-ba5c-497a-bad6-8f4389839a10.jpg',
+           '/api/v1/files/1f3af579-cad1-420d-baef-a97d383df53e.jpg',
+           '/api/v1/files/96a79184-ac26-4e2b-ae0e-971a393e97da.jpg',
+           '/api/v1/files/221849c3-f250-4333-b42e-cbb3608ab3a8.jpg',
+           '/api/v1/files/3b7f0900-50db-4a83-84ee-0432224e9e12.jpg',
+           '/api/v1/files/1f96afe0-b27f-466d-af81-4d041ada56b9.jpg',
+           '/api/v1/files/2fe8f222-e23a-45a5-8028-d8a3ffd9be1c.jpg',
+           '/api/v1/files/5ecb564d-c501-460e-81b3-36c5ca9de6a1.jpg',
+           '/api/v1/files/0b0fe299-5738-47d0-ae41-10da116ad076.jpg',
+           '/api/v1/files/986f97aa-cc7d-46fd-9ceb-fbfd3476b867.jpg',
+           '/api/v1/files/3a706c8e-654f-48c9-a594-8e3a7d035da2.jpg',
+           '/api/v1/files/45c98606-1184-4b6c-80da-016a64aaa63e.jpg',
+           '/api/v1/files/003d3003-95f6-4e4f-a97c-a88d350496ec.jpg',
+           '/api/v1/files/f096d40a-7d5a-476f-8a61-282031d30fa9.jpg',
+           '/api/v1/files/0077d2de-df78-43b7-abac-af69fc3e39dd.jpg'
+       );
+       
+    UPDATE users SET bio = 'Artisan ébéniste d\\'art et restaurateur du patrimoine en bois à Blida. Spécialiste des plafonds peints et des menuiseries traditionnelles.' 
+    WHERE email = 'walidchemat1@gmail.com';
+""")
+log("Orphaned records cleaned.")
+
 # --- 2. ADMIN LOGIN & CATALOG LOOKUPS ---
+log("Checking backend readiness...")
+for _ in range(30):
+    try:
+        with urllib.request.urlopen(f"{API_BASE}/catalog/categories", timeout=3) as r:
+            if r.getcode() == 200:
+                break
+    except Exception:
+        time.sleep(2)
+
 log("Authenticating Administrator...")
 admin_token, admin_user = login(ADMIN_EMAIL, ADMIN_PASSWORD)
 log(f"Admin logged in successfully: {admin_user['email']}")
@@ -291,7 +335,6 @@ materials_data = fetch_catalog("materials")
 techniques_data = fetch_catalog("techniques")
 epoques_data = fetch_catalog("epoques")
 
-# Flatten regions (Wilayas)
 wilayas = {}
 for r in regions_data:
     for child in r.get("children", []):
@@ -308,23 +351,18 @@ def find_wilaya(name_or_code):
             return w
     return list(wilayas.values())[0]
 
-# Flatten subcategories
 subcategories = {}
 for c in categories_data:
     for sc in c.get("subCategories", []):
         subcategories[sc["slug"]] = sc
         subcategories[sc["name"].lower()] = sc
 
-# Flatten materials
 materials_by_name = {}
 for mf in materials_data:
     for m in mf.get("materials", []):
         materials_by_name[m["name"].lower()] = m
 
-# Flatten techniques
 techniques_by_slug = {t["slug"]: t for t in techniques_data}
-
-# Flatten epoques
 epoques_by_slug = {e["slug"]: e for e in epoques_data}
 
 log("Catalog lookup maps ready.")
@@ -344,15 +382,15 @@ ARTISANS_DATA = [
         "epoque": "periode-traditionnelle-pre-moderne",
         "avatar": "avatar_amina.jpg",
         "gallery": [
-            ("pottery_1.jpg", "Jarre traditionnelle ikoufanen", "Poterie kabyle authentique façonnée à la main et cuite au feu de bois"),
-            ("pottery_2.jpg", "Délicatesse des motifs géométriques", "Gros plan sur les engobes naturels rouge et noir"),
-            ("pottery_3.jpg", "Modelage d'un plat tadjine", "Travail de l'argile locale sans tour de potier"),
-            ("pottery_4.jpg", "Collection de bols et plats émaillés", "Poteries traditionnelles prêtes pour le séchage"),
+            ("pottery_1.jpg", "Jarre traditionnelle berbère (Ikufan)", "Poterie modelée main avec motifs géométriques berbères peints aux engobes naturels"),
+            ("pottery_2.jpg", "Vase traditionnel façonné à la main", "Argile locale cuite au feu de bois selon le savoir-faire ancestral"),
+            ("pottery_3.jpg", "Collection d'écuelles et plats émaillés", "Poterie utilitaire et décorative pour la table kabyle"),
+            ("pottery_4.jpg", "Préparation et séchage des pièces", "Étape d'engobage à l'oxyde de manganèse et séchage solaire"),
         ],
         "certification": {
-            "title": "Diplôme d'Honneur de Maître Potier",
+            "title": "Certificat de Maître Artisan Potier",
             "issuer": "Chambre de l'Artisanat et des Métiers de Tizi Ouzou",
-            "issuedAt": "2014-06-15",
+            "issuedAt": "2015-06-15",
             "file": "pottery_1.jpg",
         },
         "isTeacher": True,
@@ -370,15 +408,15 @@ ARTISANS_DATA = [
         "epoque": "epoque-ottomane",
         "avatar": "avatar_djamel.jpg",
         "gallery": [
-            ("copper_1.jpg", "Vases et plateaux en cuivre rouge ciselé", "Pièces de prestige travaillées au burin dans la tradition constantinoise"),
-            ("copper_2.jpg", "Martelage au tréteau", "Le geste précis du maître artisan sur feuille de laiton"),
-            ("copper_3.jpg", "Détail d'arabesque mauresque", "Ciselure florale d'une sinia de mariage"),
-            ("copper_4.jpg", "Service à thé traditionnel en cuivre", "Théière et verres étamés à chaud selon la tradition"),
+            ("copper_1.jpg", "Atelier de Dinanderie à la Souika", "Ciselure manuelle au burin et marteau dans le vieux quartier de Constantine"),
+            ("copper_2.jpg", "Grande Sinia de Constantine", "Plateau traditionnel en cuivre rouge de 90 cm de diamètre entièrement ciselé main"),
+            ("copper_3.jpg", "Théière et cafetière d'apparat (Bakradj)", "Cuivre rouge étamé finement gravé de volutes florales arabesques"),
+            ("copper_4.jpg", "Détail de ciselure au trépoir", "Motifs floraux géométriques arabo-andalous gravés avec précision"),
         ],
         "certification": {
-            "title": "Brevet de Maître Dinandier d'Art",
-            "issuer": "Ministère du Tourisme et de l'Artisanat - CAM Constantine",
-            "issuedAt": "2010-09-20",
+            "title": "Maître Dinandier d'Art",
+            "issuer": "Chambre de l'Artisanat et des Métiers de Constantine",
+            "issuedAt": "2012-04-10",
             "file": "copper_1.jpg",
         },
         "isTeacher": True,
@@ -397,14 +435,14 @@ ARTISANS_DATA = [
         "avatar": "avatar_yasmine.jpg",
         "gallery": [
             ("clothing_1.jpg", "Karakou algérois au fil d'or", "Veste de velours grenat brodée au Majboud avec serwal chelqa"),
-            ("clothing_2.jpg", "Broderie Majboud au métier à tisser", "Détail du fil d'or pur cousu au point arrière"),
-            ("clothing_3.jpg", "Tissage traditionnel de soie", "Étoffe soyeuse destinée aux cérémonies nuptiales"),
-            ("clothing_4.jpg", "Chedda royale et parures d'apparat", "Ensemble traditionnel algérien de haute couture"),
+            ("clothing_2.jpg", "Détail de broderie Majboud", "Travail minutieux au fil d'or couché et paillettes dorées sur velours de soie"),
+            ("clothing_3.jpg", "Chedda royale et parures d'apparat", "Ensemble traditionnel haute couture algéroise pour cérémonies"),
+            ("clothing_4.jpg", "Broderie Fetla au métier à broder", "Motifs floraux séculaires réalisés point par point sur métier bois"),
         ],
         "certification": {
-            "title": "Prix d'Excellence en Broderie Traditionnelle",
-            "issuer": "Centre National de l'Artisanat Traditionnel d'Alger",
-            "issuedAt": "2018-05-12",
+            "title": "Maître Brodeuse d'Art et Haute Couture",
+            "issuer": "Chambre de l'Artisanat et des Métiers d'Alger",
+            "issuedAt": "2016-09-20",
             "file": "clothing_1.jpg",
         },
         "isTeacher": True,
@@ -422,14 +460,14 @@ ARTISANS_DATA = [
         "epoque": "periode-zianide",
         "avatar": "avatar_mohamed.jpg",
         "gallery": [
-            ("zellige_1.jpg", "Plaque décorative de zellige zianide", "Motif étoilé polychrome en carreaux taillés main"),
-            ("zellige_2.jpg", "Arc mauresque en zellige", "Restauration d'une cour intérieure de palais à Tlemcen"),
-            ("zellige_3.jpg", "Frise géométrique complexe", "Composition minutieuse sans joint apparent"),
+            ("zellige_1.jpg", "Plaque décorative de zellige zianide", "Motif étoilé polychrome en carreaux taillés main au menqach"),
+            ("zellige_2.jpg", "Arc mauresque en zellige", "Restauration d'un arc outrepassé avec calepinage géométrique traditionnel"),
+            ("zellige_3.jpg", "Frise géométrique complexe", "Découpe artisanale de chevrons et étoiles en terre cuite émaillée"),
         ],
         "certification": {
-            "title": "Certificat de Maîtrise en Restauration du Zellige",
-            "issuer": "Direction de la Culture et du Patrimoine de Tlemcen",
-            "issuedAt": "2015-11-04",
+            "title": "Maître Artisan Carreleur Zelligeur",
+            "issuer": "Chambre de l'Artisanat et des Métiers de Tlemcen",
+            "issuedAt": "2010-11-05",
             "file": "zellige_1.jpg",
         },
         "isTeacher": True,
@@ -447,15 +485,15 @@ ARTISANS_DATA = [
         "epoque": "periode-traditionnelle-pre-moderne",
         "avatar": "avatar_meziane.jpg",
         "gallery": [
-            ("jewelry_1.jpg", "Tabzimt kabyle en argent et corail", "Grande fibule d'apparat ornée d'émaux cloisonnés jaune, vert et bleu"),
-            ("jewelry_2.jpg", "Parure traditionnelle de Beni Yenni", "Bracelets ajourés et pendants d'oreilles filigranés"),
-            ("jewelry_3.jpg", "Bagues et pendentifs artisanaux", "Sertissage soigné de cabochons de corail rouge naturel"),
-            ("jewelry_4.jpg", "Établi de l'orfèvre", "Outils traditionnels de tréfilage et soudure à la flamme"),
+            ("jewelry_1.jpg", "Bijoux traditionnels en argent de Beni Yenni", "Parure complète en argent 925, émaux cloisonnés et corail rouge méditerranéen"),
+            ("jewelry_beni_yenni.jpg", "Fibule d'apparat (Tabzimt)", "Grande fibule kabyle ornée d'émaux jaune, vert, bleu et cabochons de corail"),
+            ("jewelry_tabzimt.jpg", "Détail de filigrane d'argent", "Tréfilage et torsadage manuel de fils d'argent pur"),
+            ("jewelry_2.jpg", "Bagues et bracelets en argent ciselé", "Créations artisanales alliant héritage amazigh et finitions soignées"),
         ],
         "certification": {
-            "title": "Maître Artisan Orfèvre en Joaillerie Traditionnelle",
+            "title": "Maître Bijoutier-Joaillier en Argenterie",
             "issuer": "Chambre de l'Artisanat et des Métiers de Tizi Ouzou",
-            "issuedAt": "2008-07-25",
+            "issuedAt": "2013-05-18",
             "file": "jewelry_1.jpg",
         },
         "isTeacher": True,
@@ -473,14 +511,14 @@ ARTISANS_DATA = [
         "epoque": "periode-rustumide-medievale",
         "avatar": "avatar_mustapha.jpg",
         "gallery": [
-            ("earth_1.jpg", "Architecture bioclimatique du M'Zab", "Murs en pisé épais offrant une fraîcheur naturelle sous le soleil du désert"),
-            ("earth_2.jpg", "Enduit traditionnel à la chaux blanche", "Finition soignée des terrasses et façades du ksar"),
-            ("pottery_5.jpg", "Matériaux d'adobe et argile locale", "Préparation des mortiers écologiques"),
+            ("earth_1.jpg", "Architecture bioclimatique du M'Zab", "Bâti vernaculaire en pisé et briques d'adobe dans le Ksar de Beni Isguen"),
+            ("earth_2.jpg", "Enduit traditionnel à la chaux blanche", "Finition naturelle respirante sur mur de terre crue saharienne"),
+            ("landing_material-close-up-lime-plaster.jpg", "Texture d'enduit à la chaux grasse", "Mélange chaux vive éteinte et sable de rivière tamisé"),
         ],
         "certification": {
-            "title": "Brevet de Maîtrise en Architecture de Terre Crue",
-            "issuer": "Office de Protection et de Promotion de la Vallée du M'Zab",
-            "issuedAt": "2011-04-18",
+            "title": "Maître Bâtisseur en Terre Crue et Patrimoine",
+            "issuer": "Chambre de l'Artisanat et des Métiers de Ghardaïa",
+            "issuedAt": "2011-03-22",
             "file": "earth_1.jpg",
         },
         "isTeacher": True,
@@ -498,17 +536,17 @@ ARTISANS_DATA = [
         "epoque": "periode-traditionnelle-pre-moderne",
         "avatar": "avatar_khadidja.jpg",
         "gallery": [
-            ("leather_1.jpg", "Sac besace en cuir naturel tanné végétal", "Couture au point sellier à deux aiguilles et finitions cirées"),
-            ("leather_2.jpg", "Outils de maroquinier d'art", "Alênes, gouges, abat-carre et fils de lin poissés"),
-            ("leather_3.jpg", "Découpe du cuir pleine fleur", "Façonnage minutieux d'un porte-document traditionnel"),
+            ("leather_1.jpg", "Babouches traditionnelles en cuir (Balgha)", "Maroquinerie fine façonnée main avec surpiqûres décoratives"),
+            ("leather_2.jpg", "Sacoche artisanale en cuir tanné végétal", "Cuir pleine fleur teinté naturellement et monté au point sellier"),
+            ("leather_3.jpg", "Travail de coupe et parage du cuir", "Sélection des peaux locales et préparation minutieuse en atelier"),
         ],
         "certification": {
-            "title": "Diplôme d'Artisanat d'Art en Maroquinerie",
+            "title": "Maître Artisan Maroquinier",
             "issuer": "Chambre de l'Artisanat et des Métiers de Médéa",
-            "issuedAt": "2016-09-10",
+            "issuedAt": "2017-02-14",
             "file": "leather_1.jpg",
         },
-        "isTeacher": False,
+        "isTeacher": True,
     },
     {
         "firstName": "Tahar",
@@ -523,14 +561,14 @@ ARTISANS_DATA = [
         "epoque": "epoque-ottomane",
         "avatar": "avatar_tahar.jpg",
         "gallery": [
-            ("wood_1.jpg", "Panneau de Moucharabieh en cèdre de l'Atlas", "Découpes géométriques ajourées pour baie intérieure"),
-            ("wood_2.jpg", "Sculpture manuelle à la gouge", "Bas-relief végétal sur panneau de noyer massif"),
-            ("wood_3.jpg", "Assemblage traditionnel à tenons et mortaises", "Finition huilée naturelle mettant en valeur le veinage"),
+            ("wood_1.jpg", "Balustrade et moucharabieh de la Casbah", "Bois de cèdre de l'Atlas sculpté et ajouré selon les canons mauresques"),
+            ("wood_2.jpg", "Panneau de Moucharabieh géométrique", "Assemblage traditionnel sans clous à tenons et mortaises chevillés"),
+            ("wood_3.jpg", "Sculpture manuelle à la gouge", "Ciselure fine de panneaux décoratifs pour portes et claustras"),
         ],
         "certification": {
-            "title": "Premier Prix d'Ébénisterie et Sculpture sur Bois",
+            "title": "Maître Ébéniste d'Art",
             "issuer": "Chambre de l'Artisanat et des Métiers de Blida",
-            "issuedAt": "2019-10-30",
+            "issuedAt": "2009-08-30",
             "file": "wood_1.jpg",
         },
         "isTeacher": True,
@@ -548,17 +586,17 @@ ARTISANS_DATA = [
         "epoque": "periode-numide",
         "avatar": "avatar_soraya.jpg",
         "gallery": [
-            ("clothing_3.jpg", "Tapis chaoui des Aurès en pure laine", "Motifs losangiques traditionnels aux teintes ocre et garance"),
-            ("clothing_2.jpg", "Travail sur métier vertical haute lice", "Nouage manuel de haute précision hérité des ancêtres chaouies"),
-            ("clothing_4.jpg", "Fils de laine filés au fuseau", "Laine naturelle teinte à l'écorce de noyer et à la garance"),
+            ("carpet_1.jpg", "Tisserande au métier vertical haute lice", "Tissage traditionnel de tapis chaoui en pure laine de brebis des Aurès"),
+            ("landing_material-close-up-terracotta-tiles.jpg", "Détail de motifs géométriques ancestraux", "Symboles de fertilité et de protection noués à la main"),
+            ("avatar_soraya.jpg", "Fils de laine filés au fuseau", "Laine locale filée main et teinte avec des pigments végétaux naturels"),
         ],
         "certification": {
-            "title": "Certificat de Maîtrise en Tissage Traditionnel",
+            "title": "Maître Tisserande d'Art des Aurès",
             "issuer": "Chambre de l'Artisanat et des Métiers de Batna",
-            "issuedAt": "2013-05-22",
-            "file": "clothing_3.jpg",
+            "issuedAt": "2014-10-12",
+            "file": "carpet_1.jpg",
         },
-        "isTeacher": False,
+        "isTeacher": True,
     },
     {
         "firstName": "Rachid",
@@ -573,14 +611,14 @@ ARTISANS_DATA = [
         "epoque": "periode-numide",
         "avatar": "avatar_rachid.jpg",
         "gallery": [
-            ("stone_1.jpg", "Taille d'un arc en plein cintre en calcaire", "Ajustement millimétrique des claveaux de pierre"),
-            ("stone_2.jpg", "Restauration d'un mur historique à Tipaza", "Moellons équarris montés au mortier de chaux aérienne"),
-            ("earth_1.jpg", "Vasque de fontaine taillée dans la masse", "Finitions douces bouchardées résistant aux embruns"),
+            ("stone_1.jpg", "Vestiges et taille de pierre à Tipaza", "Blocs de calcaire taillés pour la restauration d'édifices historiques"),
+            ("stone_2.jpg", "Taille d'un arc en plein cintre", "Voussoirs et clef de voûte appareillés au ciseau et à la gradine"),
+            ("landing_artisan-portrait-stonecutter.jpg", "Atelier de taille de pierre", "Façonnage manuel de pierres massives pour le patrimoine ancien"),
         ],
         "certification": {
-            "title": "Diplôme Supérieur de Tailleur de Pierre du Patrimoine",
-            "issuer": "École Nationale des Métiers du Patrimoine Historique",
-            "issuedAt": "2007-06-18",
+            "title": "Maître Tailleur de Pierre et Restaurateur",
+            "issuer": "Chambre de l'Artisanat et des Métiers de Tipaza",
+            "issuedAt": "2012-07-08",
             "file": "stone_1.jpg",
         },
         "isTeacher": True,
@@ -596,7 +634,6 @@ for art in ARTISANS_DATA:
     email = art["email"]
     log(f"Processing artisan: {art['firstName']} {art['lastName']} ({email})")
     
-    # Check if user already exists
     login_ok = False
     try:
         tok, udata = login(email)
@@ -608,7 +645,6 @@ for art in ARTISANS_DATA:
         pass
 
     if not login_ok:
-        # Register user
         reg_body = {
             "accountType": "ARTISAN",
             "firstName": art["firstName"],
@@ -621,13 +657,11 @@ for art in ARTISANS_DATA:
             log(f"  Failed to register {email}: {st} {res}")
             continue
         
-        # Verify email OTP
         otp = get_mailpit_otp(email)
         if otp:
             st, vres = api_call("POST", "/auth/verify-email", json_body={"email": email, "code": otp})
             log(f"  Verified email with OTP {otp}: status {st}")
         else:
-            # Fallback direct DB update for test reliability
             run_db_query(f"UPDATE users SET email_verified = 1, email_verified_at = NOW(), status = 'PENDING' WHERE email = '{email}';")
             log(f"  Set verified directly in DB for {email}")
 
@@ -671,32 +705,31 @@ for art in ARTISANS_DATA:
         "epoqueIds": [epoque_id] if epoque_id else [],
     }
     st_prof, res_prof = api_call("POST", "/auth/complete-profile", token=token, json_body=profile_body)
-    log(f"  Profile updated (status {st_prof})")
 
     # Upload Avatar
     avatar_file = os.path.join(IMAGES_DIR, art["avatar"])
     if os.path.exists(avatar_file):
-        av_st, av_res = upload_multipart("/users/me/avatars", token, avatar_file)
-        log(f"  Avatar uploaded: status {av_st}")
+        av_st, _ = upload_multipart("/users/me/avatars", token, avatar_file)
+        log(f"  Avatar uploaded: {av_st}")
 
-    # Upload Gallery Images
-    gal_count = db_scalar(f"SELECT count(*) FROM artisan_gallery_images WHERE artisan_id = '{uid}';")
+    # Re-sync Gallery Images if empty
+    gal_count = db_scalar(f"SELECT count(*) FROM artisan_gallery_images WHERE artisan_id = '{uid}' AND deleted_at IS NULL;")
     if not gal_count or gal_count == "0":
         for gfile, gtitle, gcap in art["gallery"]:
             gpath = os.path.join(IMAGES_DIR, gfile)
             if os.path.exists(gpath):
-                gst, gres = upload_multipart("/artisan/gallery", token, gpath, query_params={"title": gtitle, "caption": gcap})
-                log(f"    Gallery image uploaded '{gtitle}': {gst}")
+                gst, _ = upload_multipart("/artisan/gallery", token, gpath, query_params={"title": gtitle, "caption": gcap})
+                log(f"    Gallery uploaded '{gtitle}': {gst}")
     else:
-        log(f"    Gallery images already present for {art['firstName']} {art['lastName']}")
+        log(f"    Gallery images already present ({gal_count})")
 
-    # Upload Certification
-    cert_count = db_scalar(f"SELECT count(*) FROM artisan_certifications WHERE artisan_id = '{uid}';")
+    # Re-sync Certification if empty
+    cert_count = db_scalar(f"SELECT count(*) FROM artisan_certifications WHERE artisan_id = '{uid}' AND deleted_at IS NULL;")
     if not cert_count or cert_count == "0":
         cert = art["certification"]
         cpath = os.path.join(IMAGES_DIR, cert["file"])
         if os.path.exists(cpath):
-            cst, cres = upload_multipart(
+            cst, _ = upload_multipart(
                 "/artisan/certifications",
                 token,
                 cpath,
@@ -704,22 +737,28 @@ for art in ARTISANS_DATA:
             )
             log(f"    Certification uploaded '{cert['title']}': {cst}")
     else:
-        log(f"    Certification already present for {art['firstName']} {art['lastName']}")
+        log(f"    Certification already present ({cert_count})")
 
-    # Grant Teacher Status if Formateur
+    # Grant Teacher / Formateur Accreditation
     if art.get("isTeacher"):
         api_call("POST", f"/admin/artisans/{uid}/formateur-grant", token=admin_token, json_body={"adminNote": "Formateur accrédité."})
-        log(f"    Formateur accreditation granted.")
+        log(f"    Formateur accreditation confirmed.")
 
 log("Artisans seeded successfully.")
 
-# Also update existing demo artisans with avatars and gallery if needed
-for demo_email, demo_avatar in [
-    ("karim.haddad@demo.souklab.test", "pottery_2.jpg"),
-    ("nadia.benali@demo.souklab.test", "clothing_2.jpg"),
-    ("yacine.mansouri@demo.souklab.test", "earth_2.jpg"),
-    ("sophie.martin@demo.souklab.test", "stone_2.jpg"),
-    ("amina.kaci@demo.souklab.test", "zellige_2.jpg"),
+# Update existing demo artisans with avatars and formations thumbnails
+for demo_email, demo_avatar, demo_formations in [
+    ("karim.haddad@demo.souklab.test", "pottery_2.jpg", [
+        ("Enduits à la chaux : préparer et appliquer", "earth_2.jpg"),
+        ("Restaurer une maison kabyle en pierre sèche", "stone_1.jpg"),
+    ]),
+    ("sophie.martin@demo.souklab.test", "stone_2.jpg", [
+        ("Lire une façade ancienne avant de la restaurer", "stone_2.jpg"),
+        ("Initiation à la taille de pierre calcaire", "stone_1.jpg"),
+    ]),
+    ("nadia.benali@demo.souklab.test", "clothing_2.jpg", []),
+    ("yacine.mansouri@demo.souklab.test", "earth_2.jpg", []),
+    ("amina.kaci@demo.souklab.test", "zellige_2.jpg", []),
 ]:
     try:
         dtok, dudata = login(demo_email)
@@ -729,218 +768,152 @@ for demo_email, demo_avatar in [
         if os.path.exists(av_path):
             upload_multipart("/users/me/avatars", dtok, av_path)
             log(f"Updated avatar for demo artisan {demo_email}")
+            
+        for form_title, form_thumb in demo_formations:
+            safe_t = form_title.replace("'", "''")
+            fid = db_scalar(f"SELECT id FROM formations WHERE title = '{safe_t}';")
+            if fid:
+                t_file = os.path.join(IMAGES_DIR, form_thumb)
+                if os.path.exists(t_file):
+                    upload_multipart(f"/artisan/formations/{fid}/thumbnail", dtok, t_file)
+                    log(f"Updated thumbnail for '{form_title}'")
     except Exception as e:
-        log(f"Demo artisan {demo_email} update: {e}")
+        pass
 
-# --- 5. SEED FORMATIONS (MASTERCLASSES) ---
-log("Seeding masterclasses (Formations)...")
+# --- 5. SEED MASTERCLASSES (COMPLETED SESSIONS WITH REVIEWS) ---
+log("--- Seeding Completed Masterclasses & Verified Peer Reviews ---")
 
-def in_days(days, hour=9):
-    dt = datetime.now() + timedelta(days=days)
-    return f"{dt.strftime('%Y-%m-%d')}T{hour:02d}:00:00"
-
-FORMATIONS_DATA = [
-    {
-        "formateurEmail": "amina.amraoui@souklab.dz",
-        "thumbnail": "pottery_2.jpg",
-        "body": {
-            "title": "Atelier Poterie Berbère : Modelage Ancestral et Décor aux Engobes",
-            "description": "Une immersion complète d'une journée dans la poterie traditionnelle kabyle à Maâtkas.\n\nVous apprendrez à préparer l'argile locale, à monter une pièce au colombin sans tour selon la méthode ancestrale des femmes de Maâtkas, puis à peindre les motifs géométriques berbères avec des engobes minéraux naturels. Chaque participant repart avec sa création cuite.",
-            "location": "Atelier familial d'Ighil Bouchene, Maâtkas, Tizi Ouzou",
-            "isOnline": False,
-            "scheduledAt": in_days(14, 9),
-            "durationHours": 7,
-            "maxParticipants": 8,
-            "price": 6500,
-            "currency": "DZD",
-        }
-    },
-    {
-        "formateurEmail": "djamel.bensalem@souklab.dz",
-        "thumbnail": "copper_2.jpg",
-        "body": {
-            "title": "Maîtrise de la Ciselure sur Cuivre et Gravure de Motifs Mauresques",
-            "description": "Venez découvrir les secrets de la dinanderie constantinoise dans l'un des plus anciens ateliers de la Souika.\n\nApprenez le maniement du marteau de ciseleur, l'utilisation des burins et traçoirs sur plaque de cuivre rouge, et la gravure d'une sinia (plateau) aux motifs d'arabesques florales arabo-andalouses.",
-            "location": "Atelier de la Souika, Vieille Ville de Constantine",
-            "isOnline": False,
-            "scheduledAt": in_days(20, 10),
-            "durationHours": 8,
-            "maxParticipants": 6,
-            "price": 9000,
-            "currency": "DZD",
-        }
-    },
-    {
-        "formateurEmail": "yasmine.bouziane@souklab.dz",
-        "thumbnail": "clothing_1.jpg",
-        "body": {
-            "title": "Initiation à la Broderie d'Or Algéroise (Majboud & Fetla)",
-            "description": "Stage intensif de deux jours au cœur de la Casbah d'Alger.\n\nApprenez la technique séculaire du Majboud sur métier à broder en bois (guerguaf) : pose du fil d'or couché au point arrière, travail sur velours de soie, et création d'un motif traditionnel de col de Karakou. Matériel et fournitures d'or fournis.",
-            "location": "Palais des Raïs (Bastion 23), Casbah d'Alger",
-            "isOnline": False,
-            "scheduledAt": in_days(12, 9),
-            "durationHours": 12,
-            "maxParticipants": 6,
-            "price": 12000,
-            "currency": "DZD",
-        }
-    },
-    {
-        "formateurEmail": "mohamed.khellafi@souklab.dz",
-        "thumbnail": "zellige_1.jpg",
-        "body": {
-            "title": "Art du Zellige : Découpe Manuelle et Pose Géométrique",
-            "description": "Découvrez l'art du zellige arabo-andalou zianide.\n\nLes participants apprendront à utiliser le marteau de tailleur (menqach) pour débiter les carreaux émaillés en formes géométriques précises (étoiles, saoussan, chevrons), puis à assembler un panneau décoratif inversé au mortier de chaux.",
-            "location": "Atelier El-Mechouar, Centre artisanal de Tlemcen",
-            "isOnline": False,
-            "scheduledAt": in_days(18, 9),
-            "durationHours": 7,
-            "maxParticipants": 8,
-            "price": 8500,
-            "currency": "DZD",
-        }
-    },
-    {
-        "formateurEmail": "meziane.aitouarab@souklab.dz",
-        "thumbnail": "jewelry_1.jpg",
-        "body": {
-            "title": "Filigrane d'Argent et Sertissage de Corail de Beni Yenni",
-            "description": "Une journée exceptionnelle dans la capitale de l'argenterie berbère.\n\nInitiation au tréfilage et torsadage des fils d'argent 925, réalisation d'une broche fibule traditionnelle (tabzimt), initiation à la cuisson des émaux vitrifiés et sertissage d'une perle de corail rouge brut de Méditerranée.",
-            "location": "Village artisanal de Beni Yenni, Grande Kabylie",
-            "isOnline": False,
-            "scheduledAt": in_days(25, 9),
-            "durationHours": 10,
-            "maxParticipants": 5,
-            "price": 14000,
-            "currency": "DZD",
-        }
-    },
-    {
-        "formateurEmail": "mustapha.touati@souklab.dz",
-        "thumbnail": "earth_1.jpg",
-        "body": {
-            "title": "Construction en Terre Crue et Pisé Bioclimatique",
-            "description": "Atelier pratique sur chantier réel dans la vallée du M'Zab.\n\nApprentissage du dosage de la terre, confection de briques d'adobe séchées au soleil saharien, montage d'un mur en pisé damé au pilon et application de l'enduit protecteur naturel en chaux et argile blanche.",
-            "location": "Ksar de Beni Isguen, Vallée du M'Zab",
-            "isOnline": False,
-            "scheduledAt": in_days(30, 8),
-            "durationHours": 14,
-            "maxParticipants": 10,
-            "price": 10000,
-            "currency": "DZD",
-        }
-    },
-    {
-        "formateurEmail": "tahar.mansour@souklab.dz",
-        "thumbnail": "wood_1.jpg",
-        "body": {
-            "title": "Fabrication d'un Moucharabieh Traditionnel en Cèdre de l'Atlas",
-            "description": "Atelier d'ébénisterie d'art dédié à l'art du moucharabieh.\n\nApprenez le tournage des fuseaux en cèdre de l'Atlas, l'entaillage et l'assemblage géométrique à tenons et mortaises sans quincaillerie métallique. Repartez avec votre panneau décoratif ajouré.",
-            "location": "Atelier du Cèdre, Route de Chréa, Blida",
-            "isOnline": False,
-            "scheduledAt": in_days(16, 9),
-            "durationHours": 8,
-            "maxParticipants": 6,
-            "price": 11000,
-            "currency": "DZD",
-        }
-    },
-    {
-        "formateurEmail": "rachid.zemmouri@souklab.dz",
-        "thumbnail": "stone_1.jpg",
-        "body": {
-            "title": "Taille de Pierre et Restauration des Voûtes Anciennes",
-            "description": "Découverte des gestes du tailleur de pierre sur pierre calcaire méditerranéenne.\n\nÉpannelage, dressage des faces à la broche et au ciseau, traçage d'une moulure et taille d'un voussoir d'arc en plein cintre.",
-            "location": "Atelier Maritime, Port de Tipaza",
-            "isOnline": False,
-            "scheduledAt": in_days(22, 9),
-            "durationHours": 7,
-            "maxParticipants": 8,
-            "price": 7500,
-            "currency": "DZD",
-        }
-    },
+COMPLETED_FORMATIONS = [
+    ("amina.amraoui@souklab.dz", "Session Complète : Poterie Berbère et Décor aux Engobes", "pottery_1.jpg", 6500, "Atelier des Crêtes, Maâtkas"),
+    ("djamel.bensalem@souklab.dz", "Session Complète : Ciselure sur Cuivre et Gravure Mauresque", "copper_1.jpg", 9000, "Atelier de la Souika, Constantine"),
+    ("yasmine.bouziane@souklab.dz", "Session Complète : Initiation à la Broderie d'Or Algéroise (Majboud & Fetla)", "clothing_1.jpg", 12000, "Palais des Raïs (Bastion 23), Casbah d'Alger"),
+    ("mohamed.khellafi@souklab.dz", "Session Complète : Art du Zellige et Découpe Manuelle", "zellige_1.jpg", 8500, "Atelier El-Mechouar, Tlemcen"),
+    ("meziane.aitouarab@souklab.dz", "Session Complète : Tréfilage d'Argent et Filigrane Kabyle", "jewelry_1.jpg", 14000, "Beni Yenni, Grande Kabylie"),
+    ("mustapha.touati@souklab.dz", "Session Complète : Confection d'Adobes et Pisé Bioclimatique", "earth_1.jpg", 10000, "Ksar de Beni Isguen, Ghardaïa"),
+    ("tahar.mansour@souklab.dz", "Session Complète : Ébénisterie et Moucharabieh en Cèdre de l'Atlas", "wood_1.jpg", 11000, "Atelier du Cèdre, Blida"),
+    ("rachid.zemmouri@souklab.dz", "Session Complète : Taille de Pierre Calcaire et Restauration", "stone_1.jpg", 7500, "Port de Tipaza, Tipaza"),
+    ("khadidja.belkacem@souklab.dz", "Session Complète : Maroquinerie d'Art et Travail du Cuir Plein Fleur", "leather_1.jpg", 8000, "Atelier Cuir & Tradition, Médéa"),
+    ("soraya.guellil@souklab.dz", "Session Complète : Tissage Traditionnel de Tapis des Aurès", "carpet_1.jpg", 8500, "Maison de l'Artisanat, Batna"),
 ]
 
-formation_ids = {}
-
-for form in FORMATIONS_DATA:
-    f_email = form["formateurEmail"]
-    f_token = tokens.get(f_email)
-    if not f_token:
-        continue
-
-    form_title = form["body"]["title"]
+completed_fids = {}
+for form_email, form_title, form_thumb, form_price, form_loc in COMPLETED_FORMATIONS:
+    f_token = tokens[form_email]
     safe_title = form_title.replace("'", "''")
-    existing_fid = db_scalar(f"SELECT id FROM formations WHERE title = '{safe_title}';")
-    if existing_fid:
-        formation_ids[form_title] = existing_fid
-        log(f"Formation already exists: '{form_title}' ({existing_fid})")
-        continue
+    existing_fid = db_scalar(f"SELECT id FROM formations WHERE title = '{safe_title}' AND deleted_at IS NULL;")
+    if not existing_fid:
+        body = {
+            "title": form_title,
+            "description": f"Session pratique consacrée à la transmission des gestes d'excellence de ce savoir-faire artisanal traditionnel algérien.",
+            "location": form_loc,
+            "isOnline": False,
+            "scheduledAt": in_days(10, 9),
+            "durationHours": 8,
+            "maxParticipants": 8,
+            "price": form_price,
+            "currency": "DZD",
+        }
+        st_cr, res_cr = api_call("POST", "/artisan/formations", token=f_token, json_body=body)
+        if st_cr in (200, 201) and res_cr and res_cr.get("data"):
+            existing_fid = res_cr["data"]["id"]
+            log(f"Created Completed Formation '{form_title}': {existing_fid}")
+        else:
+            log(f"Failed to create completed formation '{form_title}': {st_cr} {res_cr}")
+            continue
 
-    # Create formation
-    st_cr, res_cr = api_call("POST", "/artisan/formations", token=f_token, json_body=form["body"])
-    if st_cr not in (200, 201) or not res_cr.get("data"):
-        log(f"Formation creation failed: {st_cr} {res_cr}")
-        continue
-    
-    fid = res_cr["data"]["id"]
-    formation_ids[form["body"]["title"]] = fid
-    log(f"Created Formation '{form['body']['title']}': {fid}")
+    fid = existing_fid
+    completed_fids[form_title] = fid
 
     # Upload thumbnail
-    t_file = os.path.join(IMAGES_DIR, form["thumbnail"])
+    t_file = os.path.join(IMAGES_DIR, form_thumb)
     if os.path.exists(t_file):
         upload_multipart(f"/artisan/formations/{fid}/thumbnail", f_token, t_file)
-        log(f"  Thumbnail uploaded for formation {fid}")
 
     # Submit -> Admin Review -> Publish
     api_call("POST", f"/artisan/formations/{fid}/submit", token=f_token)
     api_call("POST", f"/admin/formations/{fid}/review", token=admin_token, json_body={"decision": "APPROVED"})
     api_call("POST", f"/admin/formations/{fid}/publish", token=admin_token)
-    log(f"  Approved and published formation {fid}")
 
-# --- 6. SEED COMPLETED FORMATIONS & VERIFIED REVIEWS ---
-log("Setting up completed masterclasses and verified participant reviews...")
-
-# We will enroll some artisans into past masterclasses and add reviews
+# Peer reviews on completed sessions
 REVIEW_PAIRS = [
     {
-        "formationTitle": "Atelier Poterie Berbère : Modelage Ancestral et Décor aux Engobes",
+        "formationTitle": "Session Complète : Poterie Berbère et Décor aux Engobes",
         "formateurEmail": "amina.amraoui@souklab.dz",
         "participantEmail": "yasmine.bouziane@souklab.dz",
         "rating": 5,
-        "comment": "Une journée inoubliable avec Amina ! Sa passion pour la terre et les symboles berbères de Kabylie est communicative. J'ai adoré travailler l'argile sans tour et polir ma jarre au galet. Je recommande les yeux fermés !"
+        "comment": "Une formation inoubliable avec Amina ! Sa passion pour la terre et les symboles berbères de Kabylie est communicative. J'ai adoré travailler l'argile sans tour et polir ma jarre au galet. Je recommande les yeux fermés !"
     },
     {
-        "formationTitle": "Maîtrise de la Ciselure sur Cuivre et Gravure de Motifs Mauresques",
+        "formationTitle": "Session Complète : Ciselure sur Cuivre et Gravure Mauresque",
         "formateurEmail": "djamel.bensalem@souklab.dz",
         "participantEmail": "meziane.aitouarab@souklab.dz",
         "rating": 5,
         "comment": "Maître Djamel est une sommité de la dinanderie. Sa pédagogie et sa maîtrise du burin à Constantine sont remarquables. En tant que bijoutier, j'ai énormément appris sur les motifs arabo-andalous."
     },
     {
-        "formationTitle": "Initiation à la Broderie d'Or Algéroise (Majboud & Fetla)",
+        "formationTitle": "Session Complète : Initiation à la Broderie d'Or Algéroise (Majboud & Fetla)",
         "formateurEmail": "yasmine.bouziane@souklab.dz",
         "participantEmail": "amina.amraoui@souklab.dz",
         "rating": 5,
         "comment": "Deux journées magiques dans la Casbah d'Alger. Yasmine transmet le Majboud avec une infinie patience et une grande précision. Mon col de Karakou est magnifique !"
     },
     {
-        "formationTitle": "Art du Zellige : Découpe Manuelle et Pose Géométrique",
+        "formationTitle": "Session Complète : Art du Zellige et Découpe Manuelle",
         "formateurEmail": "mohamed.khellafi@souklab.dz",
         "participantEmail": "mustapha.touati@souklab.dz",
         "rating": 5,
         "comment": "Formation exceptionnelle au Mechouar de Tlemcen. La taille au menqach demande du doigté mais les explications de Mohamed Redha sont limpides. Un vrai enrichissement professionnel."
     },
+    {
+        "formationTitle": "Session Complète : Tréfilage d'Argent et Filigrane Kabyle",
+        "formateurEmail": "meziane.aitouarab@souklab.dz",
+        "participantEmail": "djamel.bensalem@souklab.dz",
+        "rating": 5,
+        "comment": "Une transmission rare et précieuse du filigrane d'argent à Beni Yenni. Meziane maîtrise son art sur le bout des doigts. L'apprentissage du sertissage de corail rouge est captivant."
+    },
+    {
+        "formationTitle": "Session Complète : Confection d'Adobes et Pisé Bioclimatique",
+        "formateurEmail": "mustapha.touati@souklab.dz",
+        "participantEmail": "mohamed.khellafi@souklab.dz",
+        "rating": 5,
+        "comment": "Mustapha Touati est la référence incontestée de l'architecture de terre dans le M'Zab. Le stage pratique dans le ksar de Beni Isguen allie théorie écologique et gestes bâtisseurs millénaires."
+    },
+    {
+        "formationTitle": "Session Complète : Ébénisterie et Moucharabieh en Cèdre de l'Atlas",
+        "formateurEmail": "tahar.mansour@souklab.dz",
+        "participantEmail": "rachid.zemmouri@souklab.dz",
+        "rating": 5,
+        "comment": "Stage remarquable au parfum de cèdre de l'Atlas. Tahar enseigne l'art de l'entaillage et du moucharabieh traditionnel avec une générosité et un savoir-faire exemplaires."
+    },
+    {
+        "formationTitle": "Session Complète : Taille de Pierre Calcaire et Restauration",
+        "formateurEmail": "rachid.zemmouri@souklab.dz",
+        "participantEmail": "mustapha.touati@souklab.dz",
+        "rating": 5,
+        "comment": "Rachid fait revivre la pierre calcaire de Tipaza avec talent. Ses conseils sur la stéréotomie et l'appareillage des voussoirs sont essentiels pour quiconque restaure le patrimoine bâti."
+    },
+    {
+        "formationTitle": "Session Complète : Maroquinerie d'Art et Travail du Cuir Plein Fleur",
+        "formateurEmail": "khadidja.belkacem@souklab.dz",
+        "participantEmail": "soraya.guellil@souklab.dz",
+        "rating": 5,
+        "comment": "Excellente formation à Médéa ! Khadidja possède une technique de coupe et de couture sellier d'une précision chirurgicale. Mes babouches en cuir naturel sont splendides."
+    },
+    {
+        "formationTitle": "Session Complète : Tissage Traditionnel de Tapis des Aurès",
+        "formateurEmail": "soraya.guellil@souklab.dz",
+        "participantEmail": "khadidja.belkacem@souklab.dz",
+        "rating": 5,
+        "comment": "Une immersion authentique dans la culture chaouie des Aurès. Soraya est d'une grande bienveillance et transmet l'art du nouage de la laine avec une fierté communicative."
+    },
 ]
 
 for rev in REVIEW_PAIRS:
-    fid = formation_ids.get(rev["formationTitle"])
-    part_tok = tokens.get(rev["participantEmail"])
-    form_tok = tokens.get(rev["formateurEmail"])
-    if not fid or not part_tok or not form_tok:
+    fid = completed_fids.get(rev["formationTitle"])
+    if not fid:
         continue
+    part_tok = tokens[rev["participantEmail"]]
+    form_tok = tokens[rev["formateurEmail"]]
 
     # Enroll participant
     st_enr, res_enr = api_call("POST", f"/artisan/formations/{fid}/enroll", token=part_tok)
@@ -948,7 +921,6 @@ for rev in REVIEW_PAIRS:
     if st_enr in (200, 201) and res_enr and res_enr.get("data"):
         enr_id = res_enr["data"]["id"]
     else:
-        # Check if already enrolled
         st_mine, res_mine = api_call("GET", "/artisan/formations/enrollments/me", token=part_tok)
         if st_mine == 200 and res_mine and res_mine.get("data"):
             for item in res_mine["data"].get("content", []):
@@ -956,13 +928,12 @@ for rev in REVIEW_PAIRS:
                     enr_id = item["id"]
                     break
 
-    # Move date back in database to allow completion
+    # Backdate formation to allow completion
     run_db_query(f"UPDATE formations SET scheduled_at = UTC_TIMESTAMP() - INTERVAL 5 DAY WHERE id = '{fid}';")
 
     if enr_id:
-        # Mark attendance ATTENDED
         api_call("PUT", f"/artisan/formations/{fid}/attendance/{enr_id}", token=form_tok, json_body={"status": "ATTENDED"})
-    
+
     # Mark formation COMPLETED
     run_db_query(f"UPDATE formations SET status = 'COMPLETED' WHERE id = '{fid}';")
 
@@ -972,6 +943,80 @@ for rev in REVIEW_PAIRS:
         "comment": rev["comment"]
     })
     log(f"Submitted review on '{rev['formationTitle']}': status {st_rev}")
+
+# Recalculate all artisan ratings and reviews count in database
+run_db_query("""
+    UPDATE artisans a
+    SET reviews_count = (SELECT COUNT(*) FROM artisan_reviews r WHERE r.artisan_id = a.id AND r.deleted_at IS NULL AND r.status = 'PUBLISHED'),
+        rating = COALESCE((SELECT AVG(r.rating) FROM artisan_reviews r WHERE r.artisan_id = a.id AND r.deleted_at IS NULL AND r.status = 'PUBLISHED'), 5.0);
+""")
+log("Artisan ratings and reviews count updated.")
+
+# --- 6. SEED UPCOMING PUBLISHED MASTERCLASSES (CATALOG) ---
+log("--- Seeding Upcoming Published Masterclasses for Catalog (/formations) ---")
+
+UPCOMING_FORMATIONS = [
+    ("amina.amraoui@souklab.dz", "Atelier Poterie Berbère : Modelage Ancestral et Décor aux Engobes", "pottery_3.jpg", 6500, 18, "Atelier des Crêtes, Maâtkas, Tizi Ouzou",
+     "Immersion pratique au cœur de la Kabylie pour apprendre les gestes millénaires des potières berbères.\n\nTravail sans tour : préparation de l'argile locale, façonnage au colombin, polissage au galet de rivière, et application des engobes minéraux naturels (rouge d'ocre et noir de manganèse).\n\nChaque participant crée et emporte sa propre jarre traditionnelle décorée de symboles amazighs."),
+    ("djamel.bensalem@souklab.dz", "Maîtrise de la Ciselure sur Cuivre et Gravure de Motifs Mauresques", "copper_2.jpg", 9000, 22, "Atelier de la Souika, Vieille Ville de Constantine",
+     "Venez découvrir les secrets de la dinanderie constantinoise dans l'un des plus anciens ateliers de la Souika.\n\nApprenez le maniement du marteau de ciseleur, l'utilisation des burins et traçoirs sur plaque de cuivre rouge, et la gravure d'une sinia (plateau) aux motifs d'arabesques florales arabo-andalouses."),
+    ("yasmine.bouziane@souklab.dz", "Initiation à la Broderie d'Or Algéroise (Majboud & Fetla)", "clothing_1.jpg", 12000, 15, "Palais des Raïs (Bastion 23), Casbah d'Alger",
+     "Stage intensif de deux jours au cœur de la Casbah d'Alger.\n\nApprenez la technique séculaire du Majboud sur métier à broder en bois (guerguaf) : pose du fil d'or couché au point arrière, travail sur velours de soie, et création d'un motif traditionnel de col de Karakou. Matériel et fournitures d'or fournis."),
+    ("mohamed.khellafi@souklab.dz", "Art du Zellige : Découpe Manuelle et Pose Géométrique", "zellige_1.jpg", 8500, 24, "Atelier El-Mechouar, Centre artisanal de Tlemcen",
+     "Découvrez l'art du zellige arabo-andalou zianide.\n\nLes participants apprendront à utiliser le marteau de tailleur (menqach) pour débiter les carreaux émaillés en formes géométriques précises (étoiles, saoussan, chevrons), puis à assembler un panneau décoratif inversé au mortier de chaux."),
+    ("meziane.aitouarab@souklab.dz", "Filigrane d'Argent et Sertissage de Corail de Beni Yenni", "jewelry_1.jpg", 14000, 26, "Village artisanal de Beni Yenni, Grande Kabylie",
+     "Une journée exceptionnelle dans la capitale de l'argenterie berbère.\n\nInitiation au tréfilage et torsadage des fils d'argent 925, réalisation d'une broche fibule traditionnelle (tabzimt), initiation à la cuisson des émaux vitrifiés et sertissage d'une perle de corail rouge brut de Méditerranée."),
+    ("mustapha.touati@souklab.dz", "Construction en Terre Crue et Pisé Bioclimatique", "earth_1.jpg", 10000, 28, "Ksar de Beni Isguen, Vallée du M'Zab",
+     "Atelier pratique sur chantier réel dans la vallée du M'Zab.\n\nApprentissage du dosage de la terre, confection de briques d'adobe séchées au soleil saharien, montage d'un mur en pisé damé au pilon et application de l'enduit protecteur naturel en chaux et argile blanche."),
+    ("tahar.mansour@souklab.dz", "Fabrication d'un Moucharabieh Traditionnel en Cèdre de l'Atlas", "wood_1.jpg", 11000, 19, "Atelier du Cèdre, Route de Chréa, Blida",
+     "Atelier d'ébénisterie d'art dédié à l'art du moucharabieh.\n\nApprenez le tournage des fuseaux en cèdre de l'Atlas, l'entaillage et l'assemblage géométrique à tenons et mortaises sans quincaillerie métallique. Repartez avec votre panneau décoratif ajouré."),
+    ("rachid.zemmouri@souklab.dz", "Taille de Pierre et Restauration des Voûtes Anciennes", "stone_1.jpg", 7500, 21, "Atelier Maritime, Port de Tipaza",
+     "Découverte des gestes du tailleur de pierre sur pierre calcaire méditerranéenne.\n\nÉpannelage, dressage des faces à la broche et au ciseau, traçage d'une moulure et taille d'un voussoir d'arc en plein cintre."),
+    ("khadidja.belkacem@souklab.dz", "Maroquinerie d'Art et Travail Traditionnel du Cuir Plein Fleur", "leather_1.jpg", 8000, 23, "Atelier Cuir & Tradition, Médéa",
+     "Apprentissage des techniques de maroquinerie algérienne sur cuir pleine fleur.\n\nPatronage, découpe nette au tranchet, parage des bords, teinture aux pigments naturels et couture sellier à deux aiguilles. Réalisation d'une paire de babouches traditionnelles ornementées."),
+    ("soraya.guellil@souklab.dz", "Tissage de Tapis Traditionnels Chaouis en Pure Laine des Aurès", "carpet_1.jpg", 8500, 27, "Maison de l'Artisanat, Batna",
+     "Atelier d'immersion au pays chaoui dans les secrets du tissage traditionnel sur métier vertical haute lice.\n\nPréparation de l'ourdissoir, montage de la chaîne, filage de la toison brute et reproduction des motifs géométriques berbères séculaires aux nœuds berbères."),
+]
+
+for form_email, form_title, form_thumb, form_price, form_day, form_loc, form_desc in UPCOMING_FORMATIONS:
+    f_token = tokens[form_email]
+    safe_title = form_title.replace("'", "''")
+    existing_fid = db_scalar(f"SELECT id FROM formations WHERE title = '{safe_title}' AND deleted_at IS NULL;")
+    if not existing_fid:
+        body = {
+            "title": form_title,
+            "description": form_desc,
+            "location": form_loc,
+            "isOnline": False,
+            "scheduledAt": in_days(form_day, 9),
+            "durationHours": 8,
+            "maxParticipants": 8,
+            "price": form_price,
+            "currency": "DZD",
+        }
+        st_cr, res_cr = api_call("POST", "/artisan/formations", token=f_token, json_body=body)
+        if st_cr in (200, 201) and res_cr and res_cr.get("data"):
+            existing_fid = res_cr["data"]["id"]
+            log(f"Created Upcoming Formation '{form_title}': {existing_fid}")
+        else:
+            log(f"Failed to create upcoming formation '{form_title}': {st_cr} {res_cr}")
+            continue
+
+    fid = existing_fid
+
+    # Upload thumbnail
+    t_file = os.path.join(IMAGES_DIR, form_thumb)
+    if os.path.exists(t_file):
+        st_th, _ = upload_multipart(f"/artisan/formations/{fid}/thumbnail", f_token, t_file)
+        log(f"  Thumbnail '{form_thumb}' uploaded for '{form_title}': {st_th}")
+
+    # Submit -> Review -> Publish
+    api_call("POST", f"/artisan/formations/{fid}/submit", token=f_token)
+    api_call("POST", f"/admin/formations/{fid}/review", token=admin_token, json_body={"decision": "APPROVED"})
+    api_call("POST", f"/admin/formations/{fid}/publish", token=admin_token)
+    run_db_query(f"UPDATE formations SET status = 'PUBLISHED' WHERE id = '{fid}';")
+
+log("Masterclasses seeded successfully.")
 
 # --- 7. SEED SOCIAL FEED POSTS ---
 log("Seeding authentic social feed posts with real photos...")
@@ -1018,14 +1063,6 @@ FEED_POSTS = [
         "tags": ["bijoux", "kabylie", "beniyenni", "argent", "corail"]
     },
     {
-        "authorEmail": "tahar.mansour@souklab.dz",
-        "type": "ACTUALITE",
-        "title": "Portes monumentales en cèdre sculpté pour une demeure de Blida",
-        "body": "Assemblage des vantaux en cèdre de l'Atlas terminé ! Les assemblages à tenons et mortaises ont été réalisés sans clou métallique, puis nourris à la cire d'abeille naturelle.\n\nLe parfum du bois embaume tout l'atelier de Chréa.",
-        "photos": ["wood_1.jpg", "wood_2.jpg"],
-        "tags": ["ebenisterie", "bois", "moucharabieh", "sculpture", "blida"]
-    },
-    {
         "authorEmail": "mustapha.touati@souklab.dz",
         "type": "ANNONCE",
         "title": "Chantier école : réhabilitation d'un ksar en terre crue dans le M'Zab",
@@ -1034,12 +1071,36 @@ FEED_POSTS = [
         "tags": ["pise", "terrecrue", "ghardaia", "mzab", "architecture"]
     },
     {
+        "authorEmail": "tahar.mansour@souklab.dz",
+        "type": "ACTUALITE",
+        "title": "Portes monumentales en cèdre sculpté pour une demeure de Blida",
+        "body": "Assemblage des vantaux en cèdre de l'Atlas terminé ! Les assemblages à tenons et mortaises ont été réalisés sans clou métallique, puis nourris à la cire d'abeille naturelle.\n\nLe parfum du bois embaume tout l'atelier de Chréa.",
+        "photos": ["wood_1.jpg", "wood_2.jpg"],
+        "tags": ["ebenisterie", "bois", "moucharabieh", "sculpture", "blida"]
+    },
+    {
         "authorEmail": "rachid.zemmouri@souklab.dz",
         "type": "ACTUALITE",
         "title": "Taille d'une vasque de fontaine en pierre calcaire de Tipaza",
         "body": "Derniers coups de boucharde sur cette fontaine octogonale destinée à une place publique.\n\nLa pierre calcaire locale acquiert une belle patine dorée avec le temps et résiste admirablement aux embruns marins.",
         "photos": ["stone_1.jpg", "stone_2.jpg"],
         "tags": ["tailledepierre", "tipaza", "maconnerie", "pierre", "patrimoine"]
+    },
+    {
+        "authorEmail": "khadidja.belkacem@souklab.dz",
+        "type": "ACTUALITE",
+        "title": "Collection de babouches d'apparat en cuir pleine fleur à Médéa",
+        "body": "Série de babouches traditionnelles façonnées à la main pour les réceptions de l'Aïd.\n\nSemelles en cuir tanné épais, empeignes ornées de surpiqûres dorées et doublures en peau d'agneau extra-douce. L'élégance de nos artisans du Titteri.",
+        "photos": ["leather_1.jpg", "leather_2.jpg"],
+        "tags": ["maroquinerie", "cuir", "medea", "babouches", "tradition"]
+    },
+    {
+        "authorEmail": "soraya.guellil@souklab.dz",
+        "type": "ACTUALITE",
+        "title": "Achèvement d'un tapis des Aurès en pure laine filée main",
+        "body": "Après 45 jours de tissage minutieux sur métier vertical à Batna, ce grand tapis aux symboles géométriques chaouis est enfin décroché.\n\nLa laine locale a été lavée à l'eau de source et teinte avec des racines de garance et pelures d'oignon séchées. Une merveille de rusticité et de chaleur.",
+        "photos": ["carpet_1.jpg", "landing_material-close-up-terracotta-tiles.jpg"],
+        "tags": ["tissage", "tapis", "aures", "batna", "laine", "chaoui"]
     },
 ]
 
@@ -1053,7 +1114,7 @@ for post in FEED_POSTS:
 
     post_title = post["title"]
     safe_title = post_title.replace("'", "''")
-    existing_pid = db_scalar(f"SELECT id FROM feed_posts WHERE title = '{safe_title}';")
+    existing_pid = db_scalar(f"SELECT id FROM feed_posts WHERE title = '{safe_title}' AND deleted_at IS NULL;")
     if existing_pid:
         post_ids.append(existing_pid)
         log(f"Feed post already exists: '{post_title}' ({existing_pid})")
@@ -1085,7 +1146,7 @@ for post in FEED_POSTS:
     log(f"  Post published by admin: {pid}")
 
 # --- 8. SOCIAL INTERACTIONS (LIKES & COMMENTS) ---
-log("Adding realistic social engagement (likes, comments, bookmarks)...")
+log("Adding realistic social engagement (likes, comments)...")
 
 COMMENTS_POOL = [
     ("djamel.bensalem@souklab.dz", "Un travail remarquable ! Tout mon respect pour la préservation de ce savoir-faire."),
@@ -1098,11 +1159,9 @@ COMMENTS_POOL = [
 all_artisan_tokens = list(tokens.values())
 
 for i, pid in enumerate(post_ids):
-    # Add likes from 3-5 artisans
     for tok in all_artisan_tokens[:4]:
         api_call("POST", f"/feed/{pid}/likes", token=tok)
     
-    # Add 1-2 comments
     c_author, c_text = COMMENTS_POOL[i % len(COMMENTS_POOL)]
     c_token = tokens.get(c_author)
     if c_token:
@@ -1166,7 +1225,6 @@ for cl in CLIENTS_DATA:
             log(f"Client login error {cemail}: {e}")
             continue
 
-    # Grant client permission if needed
     st_me, res_me = api_call("GET", "/auth/me", token=cl_tok)
     if st_me == 200 and res_me and res_me.get("data"):
         user_data = res_me["data"]
@@ -1174,35 +1232,26 @@ for cl in CLIENTS_DATA:
         if CLIENT_PERMISSION not in perms:
             api_call("POST", f"/admin/users/{user_data['id']}/permissions", token=admin_token, json_body={"permissionKey": CLIENT_PERMISSION})
 
-        # Upload client avatar
         c_av = os.path.join(IMAGES_DIR, cl["avatar"])
         if os.path.exists(c_av):
             upload_multipart("/users/me/avatars", cl_tok, c_av)
 
-    # Favorite 3 artisans
+    # Favorite 4 master artisans
     for fav_artisan_email in ["amina.amraoui@souklab.dz", "djamel.bensalem@souklab.dz", "yasmine.bouziane@souklab.dz", "meziane.aitouarab@souklab.dz"]:
         fav_id = artisan_ids.get(fav_artisan_email)
         if not fav_id:
             fav_id = db_scalar(f"SELECT id FROM users WHERE email = '{fav_artisan_email}';")
         if fav_id:
-            st_f, res_f = api_call("POST", f"/client/favorites/artisans/{fav_id}", token=cl_tok)
-            log(f"  Favorited artisan {fav_artisan_email} for {cemail}: status {st_f}")
+            api_call("POST", f"/client/favorites/artisans/{fav_id}", token=cl_tok)
 
 log("Client accounts and favorites seeded.")
 
 # --- 10. REINDEX ELASTICSEARCH ---
 log("Triggering mass sync for Elasticsearch...")
 try:
-    compose_file = os.environ.get("COMPOSE_FILE")
-    if not compose_file:
-        for candidate in [
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), "docker-compose.yml"),
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../nextjs/souklab-frontend/docker-compose.yml"),
-        ]:
-            if os.path.isfile(candidate):
-                compose_file = candidate
-                break
-    if compose_file:
+    res_dk = subprocess.run(["docker", "restart", "souklab_backend"], capture_output=True, text=True)
+    if res_dk.returncode != 0:
+        compose_file = "/home/walid/E/Coding/nextjs/souklab-frontend/docker-compose.yml"
         subprocess.run(["docker", "compose", "-f", compose_file, "restart", "backend"], check=True)
     log("Waiting for backend container to become ready...")
     for _ in range(45):
