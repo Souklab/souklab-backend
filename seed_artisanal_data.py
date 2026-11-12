@@ -70,7 +70,7 @@ def download_image(url, filename, is_wiki=False):
     # Fallback to local landing page image if download failed
     landing_fallback = os.environ.get(
         "FRONTEND_LANDING_IMAGE",
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../nextjs/souklab-frontend/frontend/public/assets/landing/hero-background.jpg")
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "../souklab-frontend/frontend/public/assets/landing/hero-background.jpg")
     )
     if os.path.exists(landing_fallback):
         with open(landing_fallback, "rb") as sf, open(target, "wb") as df:
@@ -260,7 +260,7 @@ log("Image collection prepared.")
 # Copy local landing images as additional backups
 landing_dir = os.environ.get(
     "FRONTEND_LANDING_DIR",
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../nextjs/souklab-frontend/frontend/public/assets/landing")
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "../souklab-frontend/frontend/public/assets/landing")
 )
 if os.path.isdir(landing_dir):
     for lf in os.listdir(landing_dir):
@@ -1251,7 +1251,7 @@ log("Triggering mass sync for Elasticsearch...")
 try:
     res_dk = subprocess.run(["docker", "restart", "souklab_backend"], capture_output=True, text=True)
     if res_dk.returncode != 0:
-        compose_file = "/home/walid/E/Coding/nextjs/souklab-frontend/docker-compose.yml"
+        compose_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../souklab-frontend/docker-compose.yml")
         subprocess.run(["docker", "compose", "-f", compose_file, "restart", "backend"], check=True)
     log("Waiting for backend container to become ready...")
     for _ in range(45):
