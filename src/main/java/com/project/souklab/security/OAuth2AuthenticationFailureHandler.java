@@ -40,6 +40,7 @@ public class OAuth2AuthenticationFailureHandler implements AuthenticationFailure
             Map.entry("consent_required", "consent_required"),
             Map.entry("interaction_required", "interaction_required"),
             Map.entry("account_selection_required", "account_selection_required"),
+            Map.entry("authorization_request_not_found", "authorization_request_not_found"),
             Map.entry("oauth2_error", "oauth2_error")
     );
 
