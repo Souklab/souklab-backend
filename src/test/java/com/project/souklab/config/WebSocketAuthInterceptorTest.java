@@ -12,6 +12,7 @@ import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -34,6 +35,7 @@ class WebSocketAuthInterceptorTest {
 
         assertThat(interceptor.preSend(message, null)).isSameAs(message);
         StompHeaderAccessor sendAccessor = StompHeaderAccessor.create(StompCommand.SEND);
+        sendAccessor.setUser(new UsernamePasswordAuthenticationToken("client@example.com", null, List.of()));
         sendAccessor.setLeaveMutable(true);
         Message<byte[]> sendMessage = MessageBuilder.createMessage(new byte[0], sendAccessor.getMessageHeaders());
         assertThat(interceptor.preSend(sendMessage, null)).isSameAs(sendMessage);
@@ -102,6 +104,43 @@ class WebSocketAuthInterceptorTest {
 
         when(jwtUtils.validateJwtToken("error-token")).thenThrow(new IllegalArgumentException("malformed"));
         assertThatThrownBy(() -> interceptor.preSend(connect("Bearer error-token"), null))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void preSend_rejectsUnauthenticatedStompAliasForConnect() {
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.STOMP);
+        accessor.setLeaveMutable(true);
+        Message<byte[]> stompMessage = MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
+
+        assertThatThrownBy(() -> interceptor().preSend(stompMessage, null))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void preSend_authenticatesValidStompAliasForConnect() {
+        when(jwtUtils.validateJwtToken("token")).thenReturn(true);
+        when(jwtUtils.getUserNameFromJwtToken("token")).thenReturn("client@example.com");
+        when(userDetailsService.loadUserByUsername("client@example.com")).thenReturn(userDetails);
+        when(userDetails.isEnabled()).thenReturn(true);
+        when(userDetails.isAccountNonLocked()).thenReturn(true);
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.STOMP);
+        accessor.addNativeHeader("Authorization", "Bearer token");
+        accessor.setLeaveMutable(true);
+        Message<byte[]> stompMessage = MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
+
+        Message<?> result = interceptor().preSend(stompMessage, null);
+
+        assertThat(StompHeaderAccessor.wrap(result).getUser()).isNotNull();
+    }
+
+    @Test
+    void preSend_rejectsFramesWithoutAConnectedPrincipal() {
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SEND);
+        accessor.setLeaveMutable(true);
+        Message<byte[]> message = MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
+
+        assertThatThrownBy(() -> interceptor().preSend(message, null))
                 .isInstanceOf(AccessDeniedException.class);
     }
 
