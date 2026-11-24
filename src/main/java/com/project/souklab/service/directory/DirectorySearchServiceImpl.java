@@ -55,8 +55,6 @@ import java.util.List;
 public class DirectorySearchServiceImpl implements DirectorySearchService {
 
     private static final String FIELD_DELETED_AT = "deletedAt";
-    private static final String FIELD_RATING = "rating";
-    private static final String FIELD_REVIEWS_COUNT = "reviewsCount";
     private static final String FIELD_VIEWS_COUNT = "viewsCount";
     private static final String FIELD_CREATED_AT = "createdAt";
     private static final String FIELD_IS_VERIFIED = "isVerified";
@@ -102,6 +100,10 @@ public class DirectorySearchServiceImpl implements DirectorySearchService {
     @Transactional(readOnly = true)
     public PaginatedResponse<ArtisanDirectoryCardDTO> search(DirectorySearchFilterDTO filter) {
         boolean contactInfoLocked = viewerPremiumResolver != null && viewerPremiumResolver.isContactInfoLocked();
+
+        if (hasMinimumRatingFilter(filter)) {
+            return emptyRatingResults(filter);
+        }
 
         if (!searchProperties.isEnabled()) {
             metrics.recordSearch(AnalyticsMetric.Operational.Backend.RELATIONAL,
@@ -258,10 +260,6 @@ public class DirectorySearchServiceImpl implements DirectorySearchService {
             predicates.add(f.terms().field("epoques.slug").matchingAny(filter.getEpoques()).toPredicate());
         }
 
-        if (filter.getMinRating() != null && filter.getMinRating() > 0.0) {
-            predicates.add(f.range().field(FIELD_RATING).atLeast(filter.getMinRating()).toPredicate());
-        }
-
         if (Boolean.TRUE.equals(filter.getVerifiedOnly())) {
             predicates.add(f.match().field(FIELD_IS_VERIFIED).matching(true).toPredicate());
         }
@@ -287,15 +285,15 @@ public class DirectorySearchServiceImpl implements DirectorySearchService {
     private SortFinalStep buildSort(SearchSortFactory f, DirectorySearchFilterDTO filter) {
         DirectorySortOrder.Key sortOrder = filter.resolveSortBy();
         if (sortOrder == DirectorySortOrder.Rating.DESC) {
-            return f.field(FIELD_RATING).desc().then().field(FIELD_REVIEWS_COUNT).desc();
+            return f.field(FIELD_CREATED_AT).desc();
         }
         if (sortOrder == DirectorySortOrder.Reviews.DESC) {
-            return f.field(FIELD_REVIEWS_COUNT).desc().then().field(FIELD_RATING).desc();
+            return f.field(FIELD_CREATED_AT).desc();
         }
         if (sortOrder == DirectorySortOrder.Views.DESC) return f.field(FIELD_VIEWS_COUNT).desc();
         if (sortOrder == DirectorySortOrder.Newest.FIRST) return f.field(FIELD_CREATED_AT).desc();
-        if (filter.hasKeyword()) return f.score().then().field(FIELD_RATING).desc();
-        return f.field(FIELD_RATING).desc();
+        if (filter.hasKeyword()) return f.score();
+        return f.field(FIELD_CREATED_AT).desc();
     }
 
     /**
@@ -321,6 +319,9 @@ public class DirectorySearchServiceImpl implements DirectorySearchService {
     @Transactional(readOnly = true)
     public PaginatedResponse<ArtisanDirectoryCardDTO> searchRelationalFallback(
             DirectorySearchFilterDTO filter, boolean contactInfoLocked) {
+        if (hasMinimumRatingFilter(filter)) {
+            return emptyRatingResults(filter);
+        }
         Specification<Artisan> spec = buildRelationalSpecification(filter);
         Sort sort = buildRelationalSort(filter);
         Pageable pageable = PageRequest.of(
@@ -466,7 +467,7 @@ public class DirectorySearchServiceImpl implements DirectorySearchService {
     }
 
     /**
-     * Appends relational accreditation, teacher status, and rating threshold predicates.
+     * Appends relational accreditation and teacher status predicates.
      */
     private void appendRelationalAccreditation(
             Root<Artisan> root,
@@ -474,10 +475,6 @@ public class DirectorySearchServiceImpl implements DirectorySearchService {
             DirectorySearchFilterDTO filter,
             List<Predicate> predicates
     ) {
-        if (filter.getMinRating() != null && filter.getMinRating() > 0.0) {
-            predicates.add(cb.greaterThanOrEqualTo(root.get(FIELD_RATING), filter.getMinRating()));
-        }
-
         if (Boolean.TRUE.equals(filter.getVerifiedOnly())) {
             predicates.add(cb.isTrue(root.get(FIELD_IS_VERIFIED)));
         }
@@ -500,16 +497,33 @@ public class DirectorySearchServiceImpl implements DirectorySearchService {
     private Sort buildRelationalSort(DirectorySearchFilterDTO filter) {
         DirectorySortOrder.Key sortOrder = filter.resolveSortBy();
         if (sortOrder == DirectorySortOrder.Rating.DESC) {
-            return Sort.by(Sort.Direction.DESC, FIELD_RATING)
-                    .and(Sort.by(Sort.Direction.DESC, FIELD_REVIEWS_COUNT));
+            return Sort.by(Sort.Direction.DESC, FIELD_CREATED_AT);
         }
         if (sortOrder == DirectorySortOrder.Reviews.DESC) {
-            return Sort.by(Sort.Direction.DESC, FIELD_REVIEWS_COUNT)
-                    .and(Sort.by(Sort.Direction.DESC, FIELD_RATING));
+            return Sort.by(Sort.Direction.DESC, FIELD_CREATED_AT);
         }
         if (sortOrder == DirectorySortOrder.Views.DESC) return Sort.by(Sort.Direction.DESC, FIELD_VIEWS_COUNT);
         if (sortOrder == DirectorySortOrder.Newest.FIRST) return Sort.by(Sort.Direction.DESC, FIELD_CREATED_AT);
-        return Sort.by(Sort.Direction.DESC, FIELD_RATING)
-                .and(Sort.by(Sort.Direction.DESC, FIELD_REVIEWS_COUNT));
+        return Sort.by(Sort.Direction.DESC, FIELD_CREATED_AT);
+    }
+
+    private boolean hasMinimumRatingFilter(DirectorySearchFilterDTO filter) {
+        return filter.getMinRating() != null && filter.getMinRating() > 0.0;
+    }
+
+    private PaginatedResponse<ArtisanDirectoryCardDTO> emptyRatingResults(DirectorySearchFilterDTO filter) {
+        int page = Math.max(0, filter.resolvePage(directoryProperties.getDefaultPageIndex()));
+        int size = Math.max(1, filter.resolveSize(
+                directoryProperties.getDefaultPageSize(),
+                directoryProperties.getMinPageSize(),
+                directoryProperties.getMaxPageSize()));
+        return PaginatedResponse.<ArtisanDirectoryCardDTO>builder()
+                .content(List.of())
+                .pageNumber(page)
+                .pageSize(size)
+                .totalElements(0)
+                .totalPages(0)
+                .last(true)
+                .build();
     }
 }

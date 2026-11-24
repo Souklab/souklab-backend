@@ -42,17 +42,12 @@ import org.hibernate.search.engine.search.predicate.dsl.TermsPredicateFieldMoreS
 import org.hibernate.search.engine.search.predicate.dsl.TermsPredicateOptionsStep;
 import org.hibernate.search.engine.search.predicate.dsl.ExistsPredicateFieldStep;
 import org.hibernate.search.engine.search.predicate.dsl.ExistsPredicateOptionsStep;
-import org.hibernate.search.engine.search.predicate.dsl.RangePredicateFieldStep;
-import org.hibernate.search.engine.search.predicate.dsl.RangePredicateFieldMoreStep;
-import org.hibernate.search.engine.search.predicate.dsl.RangePredicateOptionsStep;
 import org.hibernate.search.engine.search.predicate.dsl.NotPredicateFinalStep;
 import org.hibernate.search.engine.search.predicate.SearchPredicate;
 import org.hibernate.search.mapper.orm.Search;
 import org.hibernate.search.mapper.orm.session.SearchSession;
 import org.hibernate.search.engine.search.sort.dsl.FieldSortOptionsStep;
-import org.hibernate.search.engine.search.sort.dsl.ScoreSortOptionsStep;
 import org.hibernate.search.engine.search.sort.dsl.SearchSortFactory;
-import org.hibernate.search.engine.search.sort.dsl.TypedSearchSortFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -180,6 +175,20 @@ class DirectorySearchServiceTest {
         }
     }
 
+    @Test
+    @DisplayName("directory: minimum rating returns no results until client ratings exist")
+    void minimumRatingDoesNotFilterByFormationReviews() {
+        DirectorySearchFilterDTO filter = DirectorySearchFilterDTO.builder().minRating(4.0).page(1).size(15).build();
+
+        PaginatedResponse<ArtisanDirectoryCardDTO> response = directorySearchService.search(filter);
+
+        assertThat(response.getContent()).isEmpty();
+        assertThat(response.getPageNumber()).isEqualTo(1);
+        assertThat(response.getPageSize()).isEqualTo(15);
+        assertThat(response.getTotalElements()).isZero();
+        verify(artisanRepository, never()).findAll(any(Specification.class), any(Pageable.class));
+    }
+
     /**
      * Verifies that when Hibernate Search succeeds, paginated directory cards are mapped and returned.
      */
@@ -218,7 +227,6 @@ class DirectorySearchServiceTest {
                     .materials(List.of("argile-rouge"))
                     .techniques(List.of("modelage-ancestral"))
                     .epoques(List.of("epoque-ottomane"))
-                    .minRating(4.0)
                     .verifiedOnly(true)
                     .premiumOnly(true)
                     .teacherOnly(true)
@@ -256,11 +264,11 @@ class DirectorySearchServiceTest {
      */
     @ParameterizedTest(name = "searchRelationalFallback: maps {0} to property {1} and direction {2}")
     @CsvSource({
-            "RATING_DESC, rating, DESC",
-            "REVIEWS_DESC, reviewsCount, DESC",
+            "RATING_DESC, createdAt, DESC",
+            "REVIEWS_DESC, createdAt, DESC",
             "VIEWS_DESC, viewsCount, DESC",
             "NEWEST, createdAt, DESC",
-            "RELEVANCE, rating, DESC"
+            "RELEVANCE, createdAt, DESC"
     })
     @DisplayName("searchRelationalFallback: translates each DirectorySortOrder into expected Spring Data Sort")
     @SuppressWarnings("unchecked")
@@ -308,7 +316,6 @@ class DirectorySearchServiceTest {
                 .materials(List.of("argile-rouge"))
                 .techniques(List.of("modelage-ancestral"))
                 .epoques(List.of("epoque-ottomane"))
-                .minRating(4.0)
                 .verifiedOnly(true)
                 .premiumOnly(true)
                 .teacherOnly(true)
@@ -379,7 +386,6 @@ class DirectorySearchServiceTest {
                 .materials(List.of("argile"))
                 .techniques(List.of("modelage"))
                 .epoques(List.of("numide"))
-                .minRating(4.0)
                 .verifiedOnly(true)
                 .premiumOnly(true)
                 .teacherOnly(true)
@@ -423,9 +429,6 @@ class DirectorySearchServiceTest {
         TermsPredicateFieldStep termsField = mock(TermsPredicateFieldStep.class);
         TermsPredicateFieldMoreStep termsMore = mock(TermsPredicateFieldMoreStep.class);
         TermsPredicateOptionsStep termsOptions = mock(TermsPredicateOptionsStep.class);
-        RangePredicateFieldStep rangeField = mock(RangePredicateFieldStep.class);
-        RangePredicateFieldMoreStep rangeMore = mock(RangePredicateFieldMoreStep.class);
-        RangePredicateOptionsStep rangeOptions = mock(RangePredicateOptionsStep.class);
 
         Mockito.doReturn(matchField).when(factory).match();
         Mockito.doReturn(matchMore).when(matchField).field(any(String.class));
@@ -442,22 +445,16 @@ class DirectorySearchServiceTest {
         Mockito.doReturn(termsMore).when(termsField).field(any(String.class));
         Mockito.doReturn(termsOptions).when(termsMore).matchingAny(any(Collection.class));
         Mockito.doReturn(predicate).when(termsOptions).toPredicate();
-        Mockito.doReturn(rangeField).when(factory).range();
-        Mockito.doReturn(rangeMore).when(rangeField).field(any(String.class));
-        Mockito.doReturn(rangeOptions).when(rangeMore).atLeast(any());
-        Mockito.doReturn(predicate).when(rangeOptions).toPredicate();
-
         DirectorySearchFilterDTO filter = DirectorySearchFilterDTO.builder()
                 .regionSlug("region").wilayaCode("16").categorySlug("category")
                 .subCategorySlug("subcategory").materials(List.of("wood"))
                 .techniques(List.of("carving")).epoques(List.of("modern"))
-                .minRating(3.5).verifiedOnly(true).premiumOnly(true).teacherOnly(true).build();
+                .verifiedOnly(true).premiumOnly(true).teacherOnly(true).build();
 
         List<SearchPredicate> predicates = ReflectionTestUtils.invokeMethod(directorySearchService,
                 "buildFilterClauses", factory, filter);
-        assertThat(predicates).hasSize(12);
+        assertThat(predicates).hasSize(11);
         verify(termsMore, Mockito.times(3)).matchingAny(any(Collection.class));
-        verify(rangeMore).atLeast(3.5);
     }
 
     @Test
@@ -513,14 +510,10 @@ class DirectorySearchServiceTest {
     void hibernateSearchDsl_mapsEverySortOrder() {
         SearchSortFactory sortFactory = mock(SearchSortFactory.class);
         FieldSortOptionsStep fieldStep = mock(FieldSortOptionsStep.class);
-        TypedSearchSortFactory typedSortFactory = mock(TypedSearchSortFactory.class);
-        ScoreSortOptionsStep scoreStep = mock(ScoreSortOptionsStep.class);
         Mockito.doReturn(fieldStep).when(sortFactory).field(any(String.class));
         Mockito.doReturn(fieldStep).when(fieldStep).desc();
-        Mockito.doReturn(typedSortFactory).when(fieldStep).then();
-        Mockito.doReturn(fieldStep).when(typedSortFactory).field(any(String.class));
-        Mockito.doReturn(scoreStep).when(sortFactory).score();
-        Mockito.doReturn(typedSortFactory).when(scoreStep).then();
+        Mockito.doReturn(mock(org.hibernate.search.engine.search.sort.dsl.ScoreSortOptionsStep.class))
+                .when(sortFactory).score();
 
         DirectorySearchFilterDTO filter = DirectorySearchFilterDTO.builder().keyword("poterie").build();
         for (DirectorySortOrder.Key order : DirectorySortOrder.all()) {

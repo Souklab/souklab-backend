@@ -7,7 +7,7 @@ Search orchestration service powering the public artisan discovery engine throug
 ## Architectural Principles
 
 - **Elasticsearch Full-Text Search**: Builds dynamic predicate trees and scoring algorithms with edge-n-gram analyzers, prefix matching, and phonetic/accent-insensitive normalizers.
-- **Multi-Facet Filtering**: Supports faceted filtering across Wilayas, craft categories, subcategories, material families, materials, epoques, techniques, ratings, and teacher status.
+- **Multi-Facet Filtering**: Supports faceted filtering across Wilayas, craft categories, subcategories, material families, materials, epoques, techniques, and teacher status. Rating fields remain zero and positive minimum-rating filters return no results until client reviews are implemented; rating/review sort keys currently use creation time to avoid ordering by formation reviews.
 - **Resilient Fallback**: Designed with graceful degradation to relational JPA criteria specifications if the Elasticsearch search cluster is disabled or temporarily unreachable.
 
 ---
