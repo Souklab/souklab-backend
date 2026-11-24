@@ -63,15 +63,19 @@ public class ArtisanReviewService {
      */
     @Transactional(readOnly = true)
     public Page<ArtisanReviewResponseDTO> list(String artisanId, Pageable pageable) {
-        return reviewRepository.findByArtisanIdAndStatusAndDeletedAtIsNull(artisanId, ReviewStatus.PUBLISHED, pageable)
+        return Page.empty(pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ArtisanReviewResponseDTO> listForFormation(String formationId, Pageable pageable) {
+        return reviewRepository.findByEnrollment_Formation_IdAndStatusAndDeletedAtIsNull(
+                        formationId, ReviewStatus.PUBLISHED, pageable)
                 .map(ArtisanReviewResponseDTO::from);
     }
 
     @Transactional(readOnly = true)
     public ArtisanReviewResponseDTO getPublished(String reviewId) {
-        return reviewRepository.findByIdAndStatusAndDeletedAtIsNull(reviewId, ReviewStatus.PUBLISHED)
-                .map(ArtisanReviewResponseDTO::from)
-                .orElseThrow(() -> new ResourceNotFoundException("Review not found."));
+        throw new ResourceNotFoundException("Review not found.");
     }
 
     @Transactional(readOnly = true)
@@ -133,7 +137,6 @@ public class ArtisanReviewService {
             activityEventService.record(AnalyticsEvent.Review.SUBMITTED, reviewer.getId(), saved.getId(),
                     Map.of(AnalyticsMetadata.Content.Formation.ID, formationId, AnalyticsMetadata.Content.Rating.VALUE, saved.getRating()));
         }
-        recalculate(subject);
         notificationService.createForUser(subject.getUser(), "You received a new artisan review.", NotificationType.Review.NEW, saved.getId());
         return ArtisanReviewResponseDTO.from(saved);
     }
@@ -159,7 +162,6 @@ public class ArtisanReviewService {
         review.setRating(normalizeRating(request.getRating()));
         review.setComment(request.getComment().trim());
         ArtisanReview saved = reviewRepository.save(review);
-        recalculate(review.getArtisan());
         return ArtisanReviewResponseDTO.from(saved);
     }
 
@@ -179,15 +181,6 @@ public class ArtisanReviewService {
         review.setStatus(ReviewStatus.REMOVED);
         review.setDeletedAt(LocalDateTime.now(clock));
         reviewRepository.save(review);
-        recalculate(review.getArtisan());
-    }
-
-    private void recalculate(Artisan artisan) {
-        BigDecimal average = reviewRepository.averageRating(artisan.getId(), ReviewStatus.PUBLISHED);
-        long count = reviewRepository.countByArtisanIdAndStatusAndDeletedAtIsNull(artisan.getId(), ReviewStatus.PUBLISHED);
-        artisan.setRating(average == null ? 0.0 : average.setScale(2, RoundingMode.HALF_UP).doubleValue());
-        artisan.setReviewsCount((int) count);
-        artisanRepository.save(artisan);
     }
 
     private Artisan currentArtisan() {

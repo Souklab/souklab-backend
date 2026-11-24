@@ -17,7 +17,7 @@ class ArtisanReviewResponseDTOTest {
         assertThat(map("First", "Last").getReviewerName()).isEqualTo("First Last");
         assertThat(map("First", null).getReviewerName()).isEqualTo("First");
         assertThat(map(null, "Last").getReviewerName()).isEqualTo("Last");
-        assertThat(map(" ", " ").getReviewerName()).isEqualTo("reviewer@example.test");
+        assertThat(map(" ", " ").getReviewerName()).isNull();
     }
 
     private ArtisanReviewResponseDTO map(String firstName, String lastName) {

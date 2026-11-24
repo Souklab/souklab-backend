@@ -1,11 +1,13 @@
 # Review controller
 
-`ArtisanReviewController` lists visible reviews publicly and exposes attended-formation review creation, owner editing, and owner removal for artisans.
+Formation backed reviews are private formation data. The public artisan profile review routes stay available for forward compatibility with client reviews, but currently return no formation backed entries.
 
-- `GET /api/v1/artisan/reviews/{reviewId}` returns a review only while it is published and not deleted.
-- `GET /api/v1/artisan/formations/{formationId}/reviews/me` retrieves the authenticated artisan's existing review for their confirmed enrollment in that formation, or returns `null` if not yet reviewed.
-- Reviews require the participant enrollment status to be `ATTENDED` and the parent formation status to be `COMPLETED`.
+- `GET /api/v1/artisans/{artisanId}/reviews` returns an empty `PaginatedResponse` until client reviews are implemented.
+- `GET /api/v1/artisan/reviews/{reviewId}` returns 404 for formation reviews.
+- `GET /api/v1/artisan/formations/{formationId}/reviews` returns formation reviews only to artisan formation managers and admins; anonymous and client viewers receive 404.
+- `GET /api/v1/artisan/formations/{formationId}/reviews/me` retrieves the authenticated artisan's own review for an enrollment, or returns `null` if not yet reviewed.
+- Review submission requires an `ATTENDED` enrollment and a `COMPLETED` formation.
 
 | Controller | Responsibility |
 | --- | --- |
-| [`ArtisanReviewController`](ArtisanReviewController.java) | Public review listing and authenticated artisan review lifecycle operations. |
+| [`ArtisanReviewController`](ArtisanReviewController.java) | Private formation review listing and authenticated artisan review lifecycle operations. |

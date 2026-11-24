@@ -101,7 +101,7 @@ class ArtisanDirectoryCardDTOTest {
         assertThat(dto.getArtisanName()).isEqualTo("Artisan #-9876");
         assertThat(dto.getAvatarUrl()).isEqualTo("https://storage.souklab.dz/avatars/amina.jpg");
         assertThat(dto.getCity()).isEqualTo("Ghardaïa");
-        assertThat(dto.getRating()).isEqualTo(4.5);
+        assertThat(dto.getRating()).isZero();
     }
 
 
@@ -156,8 +156,8 @@ class ArtisanDirectoryCardDTOTest {
                 .galleryImages(List.of(img2, img1))
                 .bio("Maître potier perpétuant l'art ancestral du façonnage à la main de jarres et plats traditionnels.")
                 .city("Beni Yenni")
-                .rating(4.85)
-                .reviewsCount(42)
+                .rating(0.0)
+                .reviewsCount(0)
                 .viewsCount(1250)
                 .isVerified(true)
                 .isPremium(true)
@@ -180,8 +180,8 @@ class ArtisanDirectoryCardDTOTest {
         assertThat(dto.getCategorySlug()).isEqualTo("metiers-de-la-terre");
         assertThat(dto.getSubCategoryName()).isEqualTo("Poterie & Céramique de Kabylie");
         assertThat(dto.getSubCategorySlug()).isEqualTo("poterie-ceramique-kabylie");
-        assertThat(dto.getRating()).isEqualTo(4.85);
-        assertThat(dto.getReviewsCount()).isEqualTo(42);
+        assertThat(dto.getRating()).isZero();
+        assertThat(dto.getReviewsCount()).isZero();
         assertThat(dto.getViewsCount()).isEqualTo(1250);
         assertThat(dto.isVerified()).isTrue();
         assertThat(dto.isPremium()).isTrue();

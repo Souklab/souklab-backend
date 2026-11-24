@@ -42,6 +42,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -120,6 +121,8 @@ public class ControllerSliceSecurityConfig {
                                 "/api/v1/subscriptions/plans/**",
                                 "/api/v1/integrations/chargily/webhook"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/artisan/formations/*/reviews",
+                                "/api/v1/artisan/reviews/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exceptions -> exceptions

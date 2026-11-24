@@ -37,7 +37,7 @@ public class ArtisanReviewResponseDTO {
                 .filter(Objects::nonNull)
                 .filter(value -> !value.isBlank())
                 .reduce((left, right) -> left + " " + right)
-                .orElse(review.getReviewer().getUser().getEmail());
+                .orElse(null);
         return ArtisanReviewResponseDTO.builder()
                 .id(review.getId())
                 .reviewerId(review.getReviewer().getId())

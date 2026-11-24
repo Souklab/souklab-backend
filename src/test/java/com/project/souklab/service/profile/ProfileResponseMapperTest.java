@@ -140,8 +140,8 @@ class ProfileResponseMapperTest {
                 .epoques(new HashSet<>(Set.of(epoque)))
                 .galleryImages(List.of(galleryImage))
                 .certifications(List.of(certification))
-                .rating(4.9)
-                .reviewsCount(50)
+                .rating(0.0)
+                .reviewsCount(0)
                 .isTeacher(true)
                 .isVerified(true)
                 .isPremium(true)
@@ -158,8 +158,8 @@ class ProfileResponseMapperTest {
         assertThat(response).isInstanceOf(ArtisanResponseDTO.class);
         ArtisanResponseDTO dto = (ArtisanResponseDTO) response;
         assertThat(dto.getBio()).isEqualTo("Master potter");
-        assertThat(dto.getRating()).isEqualTo(4.9);
-        assertThat(dto.getReviewsCount()).isEqualTo(50);
+        assertThat(dto.getRating()).isZero();
+        assertThat(dto.getReviewsCount()).isZero();
         assertThat(dto.isTeacher()).isTrue();
         assertThat(dto.isVerified()).isTrue();
         assertThat(dto.isPremium()).isTrue();

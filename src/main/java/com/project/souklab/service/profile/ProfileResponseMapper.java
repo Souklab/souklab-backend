@@ -161,8 +161,8 @@ public class ProfileResponseMapper {
                 .teacher(profile != null && profile.isTeacher())
                 .verified(profile != null && profile.isVerified())
                 .premium(profile != null && profile.isPremium())
-                .rating(profile != null ? profile.getRating() : 0.0)
-                .reviewsCount(profile != null ? profile.getReviewsCount() : 0)
+                .rating(0.0)
+                .reviewsCount(0)
                 .build();
     }
 
