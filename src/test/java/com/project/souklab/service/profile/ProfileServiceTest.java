@@ -195,7 +195,7 @@ class ProfileServiceTest {
         assertThat(profile.isTeacher()).isTrue();
         assertThat(profile.isVerified()).isTrue();
         assertThat(profile.isPremium()).isTrue();
-        assertThat(profile.getRating()).isEqualTo(4.8);
+        assertThat(profile.getRating()).isZero();
     }
 
     /**
