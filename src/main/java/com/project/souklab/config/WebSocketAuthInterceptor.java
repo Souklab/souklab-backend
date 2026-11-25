@@ -33,7 +33,6 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
         this(jwtUtils, userDetailsService, OperationalMetrics.noop(), WebSocketSessionRegistry.noop());
     }
 
-    @Autowired
     public WebSocketAuthInterceptor(JwtUtils jwtUtils, UserDetailsService userDetailsService,
                                     OperationalMetrics metrics) {
         this(jwtUtils, userDetailsService, metrics, WebSocketSessionRegistry.noop());
