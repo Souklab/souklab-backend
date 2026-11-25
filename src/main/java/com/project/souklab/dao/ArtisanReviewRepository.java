@@ -31,6 +31,8 @@ public interface ArtisanReviewRepository extends JpaRepository<ArtisanReview, St
     Optional<ArtisanReview> findByIdAndStatusAndDeletedAtIsNull(String id, ReviewStatus status);
     Optional<ArtisanReview> findByEnrollmentId(String enrollmentId);
     Optional<ArtisanReview> findByEnrollmentIdAndDeletedAtIsNull(String enrollmentId);
+    Page<ArtisanReview> findByEnrollment_Formation_IdAndStatusAndDeletedAtIsNull(
+            String formationId, ReviewStatus status, Pageable pageable);
 
     @Query("select avg(r.rating) from ArtisanReview r where r.artisan.id = :artisanId and r.status = :status and r.deletedAt is null")
     BigDecimal averageRating(@Param("artisanId") String artisanId, @Param("status") ReviewStatus status);

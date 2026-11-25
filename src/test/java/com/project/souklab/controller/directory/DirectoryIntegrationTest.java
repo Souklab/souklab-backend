@@ -314,7 +314,7 @@ class DirectoryIntegrationTest {
                         .param("sortBy", "RATING_DESC"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.content[0].rating").value(4.90));
+                .andExpect(jsonPath("$.data.content[0].rating").value(0.0));
 
         mockMvc.perform(get("/api/v1/public/directory")
                         .with(user("ahmed.belkacem.integration@souklab.dz"))

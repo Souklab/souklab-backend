@@ -39,6 +39,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -85,7 +86,7 @@ class ArtisanReviewServiceTest {
     }
 
     @Test
-    void createsReviewAndRecalculatesAggregate() {
+    void createsReviewWithoutChangingProfileAggregate() {
         when(enrollmentRepository.findByFormationIdAndArtisanId("formation", "reviewer")).thenReturn(Optional.of(enrollment));
         when(reviewRepository.findByEnrollmentId("enrollment")).thenReturn(Optional.empty());
         when(reviewRepository.save(any(ArtisanReview.class))).thenAnswer(invocation -> {
@@ -93,15 +94,12 @@ class ArtisanReviewServiceTest {
             review.setId("review");
             return review;
         });
-        when(reviewRepository.averageRating("subject", ReviewStatus.PUBLISHED)).thenReturn(new BigDecimal("4.25"));
-        when(reviewRepository.countByArtisanIdAndStatusAndDeletedAtIsNull("subject", ReviewStatus.PUBLISHED)).thenReturn(1L);
-
         var result = service.create("formation", new ArtisanReviewRequestDTO(new BigDecimal("4.2"), "Excellent"));
 
         assertThat(result.getRating()).isEqualByComparingTo("4.20");
-        assertThat(subject.getRating()).isEqualTo(4.25);
-        assertThat(subject.getReviewsCount()).isEqualTo(1);
-        verify(artisanRepository).save(subject);
+        assertThat(subject.getRating()).isZero();
+        assertThat(subject.getReviewsCount()).isZero();
+        verify(artisanRepository, never()).save(subject);
     }
 
     @Test
@@ -129,8 +127,6 @@ class ArtisanReviewServiceTest {
 
         when(reviewRepository.findByEnrollmentId("enrollment")).thenReturn(Optional.of(softDeleted));
         when(reviewRepository.save(any(ArtisanReview.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(reviewRepository.averageRating("subject", ReviewStatus.PUBLISHED)).thenReturn(new BigDecimal("5.00"));
-        when(reviewRepository.countByArtisanIdAndStatusAndDeletedAtIsNull("subject", ReviewStatus.PUBLISHED)).thenReturn(1L);
 
         var result = service.create("formation", new ArtisanReviewRequestDTO(new BigDecimal("5.0"), "Much better now"));
 
@@ -139,7 +135,7 @@ class ArtisanReviewServiceTest {
         assertThat(result.getComment()).isEqualTo("Much better now");
         assertThat(softDeleted.getStatus()).isEqualTo(ReviewStatus.PUBLISHED);
         assertThat(softDeleted.getDeletedAt()).isNull();
-        verify(artisanRepository).save(subject);
+        verify(artisanRepository, never()).save(subject);
     }
 
     @Test
@@ -156,17 +152,17 @@ class ArtisanReviewServiceTest {
         ArtisanReview review = ArtisanReview.builder().reviewer(reviewer).artisan(subject)
                 .enrollment(enrollment).rating(new BigDecimal("3.50")).comment("old").status(ReviewStatus.PUBLISHED).build();
         review.setId("review");
-        when(reviewRepository.findByArtisanIdAndStatusAndDeletedAtIsNull("subject", ReviewStatus.PUBLISHED, PageRequest.of(0, 10)))
+        assertThat(service.list("subject", PageRequest.of(0, 10))).isEmpty();
+        when(reviewRepository.findByEnrollment_Formation_IdAndStatusAndDeletedAtIsNull("formation", ReviewStatus.PUBLISHED, PageRequest.of(0, 10)))
                 .thenReturn(new PageImpl<>(List.of(review)));
-        assertThat(service.list("subject", PageRequest.of(0, 10))).hasSize(1);
+        assertThat(service.listForFormation("formation", PageRequest.of(0, 10))).hasSize(1);
         when(reviewRepository.findByIdAndDeletedAtIsNull("review")).thenReturn(Optional.of(review));
         when(reviewRepository.save(any(ArtisanReview.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(reviewRepository.averageRating("subject", ReviewStatus.PUBLISHED)).thenReturn(null);
-        when(reviewRepository.countByArtisanIdAndStatusAndDeletedAtIsNull("subject", ReviewStatus.PUBLISHED)).thenReturn(0L);
         var result = service.update("review", new ArtisanReviewRequestDTO(new BigDecimal("4.126"), " changed "));
         assertThat(result.getRating()).isEqualByComparingTo("4.13");
         assertThat(review.getComment()).isEqualTo("changed");
         assertThat(subject.getRating()).isZero();
+        assertThat(subject.getReviewsCount()).isZero();
     }
 
     @Test
@@ -175,11 +171,11 @@ class ArtisanReviewServiceTest {
                 .rating(BigDecimal.ONE).comment("old").status(ReviewStatus.PUBLISHED).build();
         review.setId("review");
         when(reviewRepository.findByIdAndDeletedAtIsNull("review")).thenReturn(Optional.of(review));
-        when(reviewRepository.averageRating("subject", ReviewStatus.PUBLISHED)).thenReturn(new BigDecimal("2.5"));
-        when(reviewRepository.countByArtisanIdAndStatusAndDeletedAtIsNull("subject", ReviewStatus.PUBLISHED)).thenReturn(2L);
         service.delete("review");
         assertThat(review.getStatus()).isEqualTo(ReviewStatus.REMOVED);
         assertThat(review.getDeletedAt()).isNotNull();
+        assertThat(subject.getRating()).isZero();
+        assertThat(subject.getReviewsCount()).isZero();
 
         Artisan other = Artisan.builder().id("other").build();
         review.setStatus(ReviewStatus.PUBLISHED); review.setReviewer(other);

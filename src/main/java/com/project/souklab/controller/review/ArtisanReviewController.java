@@ -1,16 +1,19 @@
 package com.project.souklab.controller.review;
 
 import com.project.souklab.dto.common.ApiResponse;
+import com.project.souklab.dto.common.PaginatedResponse;
 import com.project.souklab.dto.review.ArtisanReviewRequestDTO;
 import com.project.souklab.dto.review.ArtisanReviewResponseDTO;
 import com.project.souklab.service.review.ArtisanReviewService;
+import com.project.souklab.exception.ResourceNotFoundException;
+import com.project.souklab.security.AccessControlService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -31,6 +34,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class ArtisanReviewController {
 
     private final ArtisanReviewService reviewService;
+    private final AccessControlService accessControl;
 
     /**
      * Lists visible reviews for an artisan.
@@ -41,10 +45,24 @@ public class ArtisanReviewController {
      */
     @GetMapping("/api/v1/artisans/{artisanId}/reviews")
     @Operation(summary = "List artisan reviews", description = "Retrieves paginated public reviews and ratings for a given artisan.")
-    public ResponseEntity<ApiResponse<Page<ArtisanReviewResponseDTO>>> list(
+    public ResponseEntity<ApiResponse<PaginatedResponse<ArtisanReviewResponseDTO>>> list(
             @PathVariable String artisanId,
             Pageable pageable) {
-        return ResponseEntity.ok(ApiResponse.success(reviewService.list(artisanId, pageable)));
+        return ResponseEntity.ok(ApiResponse.success(PaginatedResponse.from(reviewService.list(artisanId, pageable))));
+    }
+
+    @GetMapping("/api/v1/artisan/formations/{formationId}/reviews")
+    @Operation(summary = "List formation reviews", description = "Lists reviews for one formation. Only artisans and formation administrators can see reviewer details.")
+    public ResponseEntity<ApiResponse<PaginatedResponse<ArtisanReviewResponseDTO>>> listForFormation(
+            @PathVariable String formationId,
+            Pageable pageable,
+            Authentication authentication) {
+        if (!accessControl.canManageArtisanFormations(authentication)
+                && !accessControl.canManageFormations(authentication)) {
+            throw new ResourceNotFoundException("Formation not found.");
+        }
+        return ResponseEntity.ok(ApiResponse.success(
+                PaginatedResponse.from(reviewService.listForFormation(formationId, pageable))));
     }
 
     @GetMapping("/api/v1/artisan/reviews/{reviewId}")
