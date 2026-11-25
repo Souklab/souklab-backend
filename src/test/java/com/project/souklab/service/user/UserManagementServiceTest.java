@@ -47,6 +47,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -107,7 +108,7 @@ class UserManagementServiceTest {
         );
         lenient().when(capabilityService.compute(any(User.class), any())).thenAnswer(invocation -> context(invocation.getArgument(0)));
         lenient().when(capabilityService.computeAll(anyCollection(), any())).thenAnswer(invocation ->
-                ((Collection<User>) invocation.getArgument(0)).stream().collect(java.util.stream.Collectors.toMap(
+                ((Collection<User>) invocation.getArgument(0)).stream().collect(Collectors.toMap(
                         User::getId, this::context)));
     }
 
