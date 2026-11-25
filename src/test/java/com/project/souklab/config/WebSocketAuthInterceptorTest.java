@@ -27,6 +27,7 @@ class WebSocketAuthInterceptorTest {
     @Mock JwtUtils jwtUtils;
     @Mock UserDetailsService userDetailsService;
     @Mock UserDetails userDetails;
+    @Mock WebSocketSessionRegistry sessionRegistry;
 
     @Test
     void preSend_returnsNonConnectMessagesUnchanged() {
@@ -34,12 +35,7 @@ class WebSocketAuthInterceptorTest {
         Message<String> message = MessageBuilder.withPayload("payload").build();
 
         assertThat(interceptor.preSend(message, null)).isSameAs(message);
-        StompHeaderAccessor sendAccessor = StompHeaderAccessor.create(StompCommand.SEND);
-        sendAccessor.setUser(new UsernamePasswordAuthenticationToken("client@example.com", null, List.of()));
-        sendAccessor.setLeaveMutable(true);
-        Message<byte[]> sendMessage = MessageBuilder.createMessage(new byte[0], sendAccessor.getMessageHeaders());
-        assertThat(interceptor.preSend(sendMessage, null)).isSameAs(sendMessage);
-        verifyNoInteractions(jwtUtils, userDetailsService);
+        verifyNoInteractions(jwtUtils, userDetailsService, sessionRegistry);
     }
 
     @Test
@@ -144,8 +140,58 @@ class WebSocketAuthInterceptorTest {
                 .isInstanceOf(AccessDeniedException.class);
     }
 
+    @Test
+    void preSend_rejectsBrokerAndInternalSubscriptions() {
+        for (String destination : List.of("/topic/simp-user-registry", "/topic/unresolved-user-destination",
+                "/queue/chat-events-user123", "/user/other@example.com/queue/messages")) {
+            assertThatThrownBy(() -> interceptor().preSend(frame(StompCommand.SUBSCRIBE, destination, "client@example.com"), null))
+                    .as(destination).isInstanceOf(AccessDeniedException.class);
+        }
+        assertThatThrownBy(() -> interceptor().preSend(
+                frame(StompCommand.SUBSCRIBE, "/user/queue/../../topic/simp-user-registry", "client@example.com"), null))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void preSend_allowsOnlyUserScopedSubscriptionsAndApplicationSends() {
+        assertThat(interceptor().preSend(frame(StompCommand.SUBSCRIBE, "/user/queue/messages", "client@example.com"), null))
+                .isNotNull();
+        assertThat(interceptor().preSend(frame(StompCommand.SUBSCRIBE, "/user/topic/presence", "client@example.com"), null))
+                .isNotNull();
+
+        when(sessionRegistry.tokenFor("session-1")).thenReturn("token");
+        when(jwtUtils.validateJwtToken("token")).thenReturn(true);
+        when(jwtUtils.getUserNameFromJwtToken("token")).thenReturn("client@example.com");
+        when(userDetailsService.loadUserByUsername("client@example.com")).thenReturn(userDetails);
+        when(userDetails.isEnabled()).thenReturn(true);
+        when(userDetails.isAccountNonLocked()).thenReturn(true);
+        assertThat(interceptor().preSend(frame(StompCommand.SEND, "/app/v1/conversations", "client@example.com"), null))
+                .isNotNull();
+    }
+
+    @Test
+    void preSend_rejectsBrokerSendsAndClosesExpiredSession() {
+        assertThatThrownBy(() -> interceptor().preSend(frame(StompCommand.SEND, "/topic/events", "client@example.com"), null))
+                .isInstanceOf(AccessDeniedException.class);
+
+        when(sessionRegistry.tokenFor("session-1")).thenReturn("expired-token");
+        when(jwtUtils.validateJwtToken("expired-token")).thenReturn(false);
+        assertThatThrownBy(() -> interceptor().preSend(frame(StompCommand.SEND, "/app/v1/conversations", "client@example.com"), null))
+                .isInstanceOf(AccessDeniedException.class);
+        verify(sessionRegistry).close("session-1");
+    }
+
     private WebSocketAuthInterceptor interceptor() {
-        return new WebSocketAuthInterceptor(jwtUtils, userDetailsService);
+        return new WebSocketAuthInterceptor(jwtUtils, userDetailsService, OperationalMetrics.noop(), sessionRegistry);
+    }
+
+    private Message<byte[]> frame(StompCommand command, String destination, String username) {
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(command);
+        accessor.setDestination(destination);
+        accessor.setSessionId("session-1");
+        accessor.setUser(new UsernamePasswordAuthenticationToken(username, null, List.of()));
+        accessor.setLeaveMutable(true);
+        return MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
     }
 
     private Message<byte[]> connect(String authorization) {
