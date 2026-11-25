@@ -325,12 +325,16 @@ public class AuthService {
 
         String accessToken = jwtUtils.generateAccessToken(user.getEmail());
 
+        ProfileResponse profile = profileResponseMapper.mapToProfileResponse(user);
         return JwtResponseDTO.builder()
                 .accessToken(accessToken)
                 .refreshToken(newToken.getToken())
                 .tokenType(TokenType.BEARER)
                 .expiresIn(jwtProperties.getAccessTokenExpirationMs() / MS_PER_SECOND)
-                .user(profileResponseMapper.mapToProfileResponse(user))
+                .user(profile)
+                .accountRole(profile.getAccountRole())
+                .capabilities(profile.getCapabilities())
+                .premium(profile.getPremiumStatus())
                 .permissions(canonicalPermissions(user))
                 .build();
     }
@@ -630,12 +634,16 @@ public class AuthService {
         String accessToken = jwtUtils.generateAccessToken(user.getEmail());
         RefreshToken refreshToken = refreshTokenService.createRefreshTokenForUser(user);
 
+        ProfileResponse profile = profileResponseMapper.mapToProfileResponse(user);
         return JwtResponseDTO.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken.getToken())
                 .tokenType(TokenType.BEARER)
                 .expiresIn(jwtProperties.getAccessTokenExpirationMs() / MS_PER_SECOND)
-                .user(profileResponseMapper.mapToProfileResponse(user))
+                .user(profile)
+                .accountRole(profile.getAccountRole())
+                .capabilities(profile.getCapabilities())
+                .premium(profile.getPremiumStatus())
                 .permissions(canonicalPermissions(user))
                 .build();
     }

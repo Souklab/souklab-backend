@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Set;
 import com.project.souklab.access.Capability;
 import com.project.souklab.access.PremiumStatus;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Profile response DTO scoped to ARTISAN users.
@@ -43,6 +44,7 @@ public class ArtisanResponseDTO implements ProfileResponse {
     private AccountStatus accountStatus;
     private AccountRole accountRole;
     private Set<Capability> capabilities;
+    @JsonProperty("premium")
     private PremiumStatus premiumStatus;
     private Set<Permission> permissions;
     private boolean emailVerified;

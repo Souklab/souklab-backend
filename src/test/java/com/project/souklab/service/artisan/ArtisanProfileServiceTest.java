@@ -190,7 +190,7 @@ class ArtisanProfileServiceTest {
                 any(Instant.class))).thenAnswer(invocation -> {
             User user = invocation.getArgument(0);
             Set<Capability> capabilities = user.getAccountRole() == AccountRole.ADMIN
-                    ? Set.of(Capability.MANAGE_USERS, Capability.VIEW_ARTISAN_IDENTITY) : Set.of();
+                    ? Set.of(Capability.ADMIN_USERS, Capability.VIEW_ARTISAN_IDENTITY) : Set.of();
             return new ViewerContext(user.getId(), user.getAccountRole() == null ? AccountRole.CLIENT : user.getAccountRole(),
                     PremiumStatus.none(), capabilities, false);
         });

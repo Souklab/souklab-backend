@@ -31,7 +31,7 @@ public class AccessControlService {
 
     public boolean isAdmin(Authentication authentication) {
         ViewerContext context = context(authentication);
-        return context != null && context.can(Capability.MANAGE_USERS);
+        return context != null && context.can(Capability.ADMIN_USERS);
     }
 
     public boolean canManageUsers(Authentication authentication) {

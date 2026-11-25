@@ -680,6 +680,9 @@ class AuthServiceTest {
         JwtResponseDTO response = authService.login(dto, null);
 
         assertThat(response.getAccessToken()).isEqualTo("access-token");
+        assertThat(response.getAccountRole()).isEqualTo(AccountRole.CLIENT);
+        assertThat(response.getCapabilities()).isNotNull();
+        assertThat(response.getPremium()).isNotNull();
         assertThat(user.getFailedLoginAttempts()).isZero();
         assertThat(user.getLockedUntil()).isNull();
     }

@@ -66,10 +66,11 @@ public class ProfileResponseMapper {
             return AdminProfileResponseDTO.builder()
                     .id(user.getId()).email(user.getEmail()).firstName(user.getFirstName())
                     .lastName(user.getLastName()).name(user.getName()).phone(user.getPhone())
-                    .avatarUrl(user.getAvatarUrl()).accountStatus(user.getStatus()).accountRole(AccountRole.ADMIN)
+                    .avatarUrl(user.getAvatarUrl()).accountStatus(user.getStatus()).accountRole(viewerContext.role())
                     .permissions(permissionKeys).emailVerified(user.isEmailVerified())
                     .emailVerifiedAt(user.getEmailVerifiedAt()).createdAt(user.getCreatedAt())
-                    .updatedAt(user.getUpdatedAt()).build();
+                    .updatedAt(user.getUpdatedAt()).capabilities(viewerContext.capabilities())
+                    .premiumStatus(viewerContext.premiumStatus()).build();
         }
         boolean isArtisan = viewerContext.role() == AccountRole.ARTISAN;
 
@@ -77,7 +78,7 @@ public class ProfileResponseMapper {
             return buildArtisanProfileResponse(user, permissionKeys, viewerContext);
         }
 
-        return buildClientProfileResponse(user, permissionKeys);
+        return buildClientProfileResponse(user, permissionKeys, viewerContext);
     }
 
     /**
@@ -166,7 +167,9 @@ public class ProfileResponseMapper {
                 .phone(user.getPhone())
                 .avatarUrl(user.getAvatarUrl())
                 .accountStatus(user.getStatus())
-                .accountRole(user.getAccountRole())
+                .accountRole(viewerContext.role())
+                .capabilities(viewerContext.capabilities())
+                .premiumStatus(viewerContext.premiumStatus())
                 .permissions(permissionKeys)
                 .emailVerified(user.isEmailVerified())
                 .emailVerifiedAt(user.getEmailVerifiedAt())
@@ -201,7 +204,8 @@ public class ProfileResponseMapper {
      * @param permissionKeys the set of permission keys assigned to the user
      * @return the fully populated {@link ClientProfileResponseDTO}
      */
-    private ClientProfileResponseDTO buildClientProfileResponse(User user, Set<Permission> permissionKeys) {
+    private ClientProfileResponseDTO buildClientProfileResponse(User user, Set<Permission> permissionKeys,
+                                                                ViewerContext viewerContext) {
         Client client = user.getClient();
         return ClientProfileResponseDTO.builder()
                 .id(user.getId())
@@ -212,7 +216,9 @@ public class ProfileResponseMapper {
                 .phone(user.getPhone())
                 .avatarUrl(user.getAvatarUrl())
                 .accountStatus(user.getStatus())
-                .accountRole(user.getAccountRole())
+                .accountRole(viewerContext.role())
+                .capabilities(viewerContext.capabilities())
+                .premiumStatus(viewerContext.premiumStatus())
                 .permissions(permissionKeys)
                 .emailVerified(user.isEmailVerified())
                 .emailVerifiedAt(user.getEmailVerifiedAt())

@@ -40,7 +40,7 @@ class AccessControlServiceTest {
         when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
         when(capabilityService.compute(any(User.class), any()))
                 .thenReturn(new ViewerContext(null, AccountRole.ADMIN, PremiumStatus.none(),
-                        Set.of(Capability.MANAGE_USERS), false));
+                        Set.of(Capability.ADMIN_USERS), false));
         Authentication authentication = new TestingAuthenticationToken("ADMIN@example.com", "credentials");
         authentication.setAuthenticated(true);
 
