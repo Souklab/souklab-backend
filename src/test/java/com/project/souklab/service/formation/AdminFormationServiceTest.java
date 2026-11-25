@@ -1,4 +1,8 @@
 package com.project.souklab.service.formation;
+
+import com.project.souklab.access.CapabilityService;
+import com.project.souklab.access.PremiumStatus;
+import com.project.souklab.access.ViewerContext;
 import com.project.souklab.security.Permission;
 
 import com.project.souklab.dao.FormationEnrollmentRepository;
@@ -14,6 +18,7 @@ import com.project.souklab.exception.BadRequestException;
 import com.project.souklab.exception.ConflictException;
 import com.project.souklab.config.AppStorageProperties;
 import com.project.souklab.model.Artisan;
+import com.project.souklab.model.AccountRole;
 import com.project.souklab.model.EnrollmentStatus;
 import com.project.souklab.model.Formation;
 import com.project.souklab.model.FormationReview;
@@ -39,6 +44,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import java.time.Clock;
+import java.time.Instant;
+import java.util.Set;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
@@ -88,6 +95,9 @@ class AdminFormationServiceTest {
     @Mock
     private AccessControlService accessControlService;
 
+    @Mock
+    private CapabilityService capabilityService;
+
     @Spy
     private AppStorageProperties appStorageProperties = new AppStorageProperties();
 
@@ -119,6 +129,7 @@ class AdminFormationServiceTest {
                 .lastName("Artisan")
                 .build();
         authorUser.setId("author-user-uuid");
+        authorUser.setAccountRole(AccountRole.ARTISAN);
 
         authorArtisan = Artisan.builder()
                 .id("author-artisan-uuid")
@@ -126,6 +137,11 @@ class AdminFormationServiceTest {
                 .city("Ghardaia")
                 .isTeacher(true)
                 .build();
+        lenient().when(capabilityService.compute(any(User.class), any(Instant.class))).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            return new ViewerContext(user.getId(), AccountRole.ARTISAN, PremiumStatus.none(), Set.of(),
+                    user == authorUser);
+        });
 
         pendingFormation = Formation.builder()
                 .author(authorArtisan)

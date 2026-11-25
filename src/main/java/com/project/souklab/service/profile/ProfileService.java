@@ -8,6 +8,7 @@ import com.project.souklab.dao.MaterialRepository;
 import com.project.souklab.dao.RegionRepository;
 import com.project.souklab.dao.TechniqueRepository;
 import com.project.souklab.dao.UserRepository;
+import com.project.souklab.access.MeCapabilitiesContributor;
 import com.project.souklab.dto.auth.CompleteProfileRequestDTO;
 import com.project.souklab.dto.common.PatchField;
 import com.project.souklab.dto.profile.ProfileResponse;
@@ -15,6 +16,7 @@ import com.project.souklab.dto.profile.UserPatchDTO;
 import com.project.souklab.exception.ForbiddenException;
 import com.project.souklab.exception.ResourceNotFoundException;
 import com.project.souklab.exception.UnauthorizedException;
+import com.project.souklab.model.AccountRole;
 import com.project.souklab.model.Artisan;
 import com.project.souklab.model.Client;
 import com.project.souklab.model.ClientType;
@@ -24,7 +26,6 @@ import com.project.souklab.model.Material;
 import com.project.souklab.model.Region;
 import com.project.souklab.model.Technique;
 import com.project.souklab.model.User;
-import com.project.souklab.security.Permission;
 import com.project.souklab.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -57,6 +58,7 @@ public class ProfileService {
     private final TechniqueRepository techniqueRepository;
     private final EpoqueRepository epoqueRepository;
     private final ProfileResponseMapper profileResponseMapper;
+    private final MeCapabilitiesContributor meCapabilitiesContributor;
 
     /**
      * Returns the profile of the currently authenticated user.
@@ -75,7 +77,7 @@ public class ProfileService {
         User user = userRepository.findByEmail(email.toLowerCase())
                 .orElseThrow(() -> new ResourceNotFoundException(ERROR_USER_NOT_FOUND_PREFIX + email));
 
-        return profileResponseMapper.mapToProfileResponse(user);
+        return meCapabilitiesContributor.contribute(user, profileResponseMapper.mapToProfileResponse(user));
     }
 
     /**
@@ -164,13 +166,11 @@ public class ProfileService {
     }
 
     private boolean isAdmin(User user) {
-        return user != null && user.getPermissions() != null && user.getPermissions().stream()
-                .anyMatch(permission -> Permission.Admin.USERS.matches(permission.getPermissionKey()));
+        return user != null && user.getAccountRole() == AccountRole.ADMIN;
     }
 
     private boolean isArtisan(User user) {
-        return user != null && user.getPermissions() != null && user.getPermissions().stream()
-                .anyMatch(permission -> Permission.Artisan.CONTENT.matches(permission.getPermissionKey()));
+        return user != null && user.getAccountRole() == AccountRole.ARTISAN;
     }
 
     /**

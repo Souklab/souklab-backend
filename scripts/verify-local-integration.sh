@@ -54,6 +54,19 @@ export APP_JWT_REFRESH_EXP="${APP_JWT_REFRESH_EXP:-86400000}"
 export APP_STORAGE_UPLOADS="${APP_STORAGE_UPLOADS:-storage/uploads}"
 export APP_STORAGE_THUMBNAILS="${APP_STORAGE_THUMBNAILS:-storage/thumbnails}"
 export APP_STORAGE_INDEXES="${APP_STORAGE_INDEXES:-storage/indexes}"
+export APP_STORAGE_FILE_SERVING_PREFIX="${APP_STORAGE_FILE_SERVING_PREFIX:-/api/v1/files/}"
+export APP_LOGGING_LEVEL_ROOT="${APP_LOGGING_LEVEL_ROOT:-INFO}"
+export APP_LOGGING_LEVEL_APP="${APP_LOGGING_LEVEL_APP:-INFO}"
+export APP_LOGGING_LEVEL_SEARCH="${APP_LOGGING_LEVEL_SEARCH:-INFO}"
+export APP_LOGGING_LEVEL_SEARCH_REQUESTS="${APP_LOGGING_LEVEL_SEARCH_REQUESTS:-WARN}"
+export APP_LOGGING_LEVEL_ELASTICSEARCH="${APP_LOGGING_LEVEL_ELASTICSEARCH:-INFO}"
+export ARTISAN_GALLERY_ALLOWED_MIME_TYPES="${ARTISAN_GALLERY_ALLOWED_MIME_TYPES:-image/jpeg,image/png,image/webp}"
+export ARTISAN_CERTIFICATION_ALLOWED_MIME_TYPES="${ARTISAN_CERTIFICATION_ALLOWED_MIME_TYPES:-application/pdf,image/jpeg,image/png}"
+export FORMATION_THUMBNAIL_ALLOWED_MIME_TYPES="${FORMATION_THUMBNAIL_ALLOWED_MIME_TYPES:-image/jpeg,image/png,image/webp}"
+export FORMATION_FILE_ALLOWED_MIME_TYPES="${FORMATION_FILE_ALLOWED_MIME_TYPES:-application/pdf,image/jpeg,image/png}"
+export FEED_ALLOWED_IMAGE_MIME_TYPES="${FEED_ALLOWED_IMAGE_MIME_TYPES:-image/jpeg,image/png,image/webp}"
+export STORAGE_ALLOWED_MIME_TYPES="${STORAGE_ALLOWED_MIME_TYPES:-image/jpeg,image/png,application/pdf}"
+export AVATAR_ALLOWED_MIME_TYPES="${AVATAR_ALLOWED_MIME_TYPES:-image/jpeg,image/png,image/webp}"
 export STORAGE_PROVIDER="${STORAGE_PROVIDER:-in-memory}"
 export APP_ADMIN_DEFAULT_EMAIL="${APP_ADMIN_DEFAULT_EMAIL:-admin@souklab.test}"
 export APP_ADMIN_DEFAULT_PASSWORD="${APP_ADMIN_DEFAULT_PASSWORD:-local-test-password}"
@@ -104,6 +117,20 @@ export PHASE10_ENDPOINT_SECURITY="${PHASE10_ENDPOINT_SECURITY:-true}"
 # Bound Spring's broker-relay lifecycle wait so a successful test run cannot
 # remain attached forever when RabbitMQ closes a relay session slowly.
 export SPRING_LIFECYCLE_TIMEOUT_PER_SHUTDOWN_PHASE="${SPRING_LIFECYCLE_TIMEOUT_PER_SHUTDOWN_PHASE:-10s}"
+
+# Supply remaining application properties from the checked-in example config
+# when the caller has not already provided them. Never evaluate the example as
+# shell code; its values are plain text, and explicit verification settings
+# above take precedence.
+while IFS='=' read -r verification_key verification_value; do
+  [[ "$verification_key" =~ ^[A-Z][A-Z0-9_]*$ ]] || continue
+  [[ -v $verification_key ]] && continue
+  case "$verification_value" in
+    \"*\") verification_value="${verification_value:1:${#verification_value}-2}" ;;
+    \'*\') verification_value="${verification_value:1:${#verification_value}-2}" ;;
+  esac
+  export "$verification_key=$verification_value"
+done < .env.example
 
 smtp_sink_pid=""
 if command -v python3 >/dev/null 2>&1; then

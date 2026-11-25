@@ -1,5 +1,7 @@
 package com.project.souklab.service.feed;
 
+import com.project.souklab.model.AccountRole;
+
 import com.project.souklab.dao.FeedPostBookmarkRepository;
 import com.project.souklab.dao.FeedPostCommentLikeRepository;
 import com.project.souklab.dao.FeedPostCommentRepository;
@@ -150,7 +152,7 @@ public class FeedEngagementService {
         Page<FeedPostLike> likes = postLikeRepository.findByPostId(postId, pageable);
         return PaginatedResponse.from(likes.map(like -> {
             User liker = like.getUser();
-            boolean redact = liker.getArtisan() != null
+            boolean redact = liker.getAccountRole() == AccountRole.ARTISAN
                     && viewerPremiumResolver != null
                     && viewerPremiumResolver.isContactInfoLockedFor(liker);
             return FeedPostLikerDTO.builder()

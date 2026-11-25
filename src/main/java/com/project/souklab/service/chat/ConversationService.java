@@ -26,6 +26,8 @@ import com.project.souklab.filestorage.validation.FileValidator;
 import org.springframework.web.multipart.MultipartFile;
 import com.project.souklab.security.Permission;
 import com.project.souklab.security.ViewerPremiumResolver;
+import com.project.souklab.access.Capability;
+import com.project.souklab.access.CapabilityService;
 import com.project.souklab.service.notification.NotificationService;
 import com.project.souklab.service.notification.AfterCommitAction;
 import com.project.souklab.service.user.CurrentUserProvider;
@@ -65,6 +67,7 @@ public class ConversationService {
     private final Clock clock;
     private final StorageService storageService;
     private final FileValidator fileValidator;
+    private final CapabilityService capabilityService;
     private final Map<String, Instant> lastTypingEvent = new ConcurrentHashMap<>();
     private ActivityEventService activityEventService;
 
@@ -236,13 +239,11 @@ public class ConversationService {
             throw new ForbiddenException("Account is not eligible for messaging");
         }
         if (sending) {
-            if (isClient(user)) {
-                boolean isPremium = user.getClient() != null && user.getClient().isPremium();
-                if (!isPremium) {
+            var viewerContext = capabilityService.compute(user, Instant.now(clock));
+            if (!viewerContext.can(Capability.SEND_MESSAGE)) {
+                if (viewerContext.role() == AccountRole.CLIENT) {
                     throw new ForbiddenException("A premium subscription is required for clients to initiate or send messages");
                 }
-            }
-            if (user.getPermissions().stream().noneMatch(p -> p.isEnabled() && Permission.Message.SEND.matches(p.getPermissionKey()))) {
                 throw new ForbiddenException("Account is not eligible to send messages");
             }
         }
@@ -268,7 +269,7 @@ public class ConversationService {
                 : messageRepository.findById(self.getLastReadMessageId()).map(Message::getCreatedAt).orElse(null);
         long unread = messageRepository.countUnread(c, current, after);
         String participantName = resolveParticipantName(p.getUser(), current);
-        String role = p.getUser().getArtisan() != null ? "ARTISAN" : p.getUser().getClient() != null ? "CLIENT" : "USER";
+        String role = p.getUser().getAccountRole() != null ? p.getUser().getAccountRole().value() : "CLIENT";
         String participantAvatarUrl = isParticipantIdentityMasked(p.getUser(), current)
                 ? null : p.getUser().getAvatarUrl();
         return new ConversationResponse(c.getId(), p.getUser().getId(), participantName, self.isArchived(), preview, unread,
@@ -276,31 +277,22 @@ public class ConversationService {
     }
 
     private boolean isParticipantIdentityMasked(User participant, User viewer) {
-        if (participant == null || participant.getArtisan() == null) return false;
-        boolean isAdmin = viewer != null && viewer.getPermissions() != null && viewer.getPermissions().stream()
-                .anyMatch(p -> p.isEnabled() && Permission.Admin.USERS.matches(p.getPermissionKey()));
+        if (participant == null || participant.getAccountRole() != AccountRole.ARTISAN) return false;
         boolean isSelf = viewer != null && Objects.equals(viewer.getId(), participant.getId());
-        return !isAdmin && !isSelf && isClient(viewer)
-                && (viewer.getClient() == null || !viewer.getClient().isPremium());
+        return !isSelf && viewer != null
+                && !capabilityService.compute(viewer, Instant.now(clock)).can(Capability.VIEW_ARTISAN_IDENTITY);
     }
 
     private String resolveParticipantName(User participant, User viewer) {
         if (participant == null) return "Unknown";
-        if (participant.getArtisan() != null && isParticipantIdentityMasked(participant, viewer)) {
+        if (participant.getAccountRole() == AccountRole.ARTISAN && isParticipantIdentityMasked(participant, viewer)) {
             return ViewerPremiumResolver.maskArtisanName(participant.getArtisan().getId());
         }
         return participant.getName();
     }
 
     private boolean isClient(User user) {
-        if (user == null) return false;
-        if (user.getArtisan() != null) return false;
-        if (user.getClient() != null) return true;
-        if (user.getPermissions() != null) {
-            return user.getPermissions().stream()
-                    .anyMatch(p -> p.isEnabled() && Permission.Client.FAVORITES.matches(p.getPermissionKey()));
-        }
-        return false;
+        return user != null && user.getAccountRole() == AccountRole.CLIENT;
     }
 
     private MessageResponse toMessage(Message m) {

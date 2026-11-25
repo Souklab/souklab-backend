@@ -1,4 +1,8 @@
 package com.project.souklab.service.formation;
+import com.project.souklab.access.CapabilityService;
+import com.project.souklab.access.PremiumStatus;
+import com.project.souklab.access.ViewerContext;
+import com.project.souklab.model.AccountRole;
 import com.project.souklab.security.Permission;
 import com.project.souklab.config.FormationProperties;
 import com.project.souklab.dao.ArtisanRepository;
@@ -46,6 +50,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import java.io.ByteArrayInputStream;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.Instant;
+import java.util.Set;
 import java.util.List;
 import java.util.Optional;
 
@@ -54,6 +60,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -87,6 +94,9 @@ class FormationEnrollmentServiceTest {
     @Mock
     private StorageService storageService;
 
+    @Mock
+    private CapabilityService capabilityService;
+
     @Spy
     private FormationProperties formationProperties = new FormationProperties();
 
@@ -113,6 +123,7 @@ class FormationEnrollmentServiceTest {
                 .lastName("Maitre")
                 .build();
         instructorUser.setId(INSTRUCTOR_ID);
+        instructorUser.setAccountRole(AccountRole.ARTISAN);
 
         instructorArtisan = Artisan.builder()
                 .id(INSTRUCTOR_ID)
@@ -127,6 +138,7 @@ class FormationEnrollmentServiceTest {
                 .lastName("Artisan")
                 .build();
         peerUser.setId(PEER_ID);
+        peerUser.setAccountRole(AccountRole.ARTISAN);
 
         peerArtisan = Artisan.builder()
                 .id(PEER_ID)
@@ -149,6 +161,12 @@ class FormationEnrollmentServiceTest {
                 .status(FormationStatus.PUBLISHED)
                 .build();
         publishedFormation.setId(FORMATION_ID);
+        Mockito.lenient().when(capabilityService.compute(any(User.class),
+                any(Instant.class))).thenAnswer(invocation -> {
+            User author = invocation.getArgument(0);
+            return new ViewerContext(author.getId(), AccountRole.ARTISAN, PremiumStatus.none(), Set.of(),
+                    author == instructorUser);
+        });
 
         courseFile = FormationFile.builder()
                 .formation(publishedFormation)

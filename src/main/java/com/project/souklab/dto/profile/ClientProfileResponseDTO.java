@@ -1,6 +1,7 @@
 package com.project.souklab.dto.profile;
 
 import com.project.souklab.model.AccountStatus;
+import com.project.souklab.model.AccountRole;
 import com.project.souklab.model.ClientType;
 import com.project.souklab.security.Permission;
 import lombok.AllArgsConstructor;
@@ -10,6 +11,8 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.Set;
+import com.project.souklab.access.Capability;
+import com.project.souklab.access.PremiumStatus;
 
 /**
  * Profile response DTO scoped to CLIENT users.
@@ -31,6 +34,9 @@ public class ClientProfileResponseDTO implements ProfileResponse {
     /** Placeholder — wired to real upload path in Phase D. */
     private String avatarUrl;
     private AccountStatus accountStatus;
+    private AccountRole accountRole;
+    private Set<Capability> capabilities;
+    private PremiumStatus premiumStatus;
     private Set<Permission> permissions;
     private boolean emailVerified;
     private LocalDateTime emailVerifiedAt;

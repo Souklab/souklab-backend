@@ -165,7 +165,7 @@ class ArtisanDirectoryCardDTOTest {
                 .createdAt(now)
                 .build();
 
-        ArtisanDirectoryCardDTO dto = ArtisanDirectoryCardDTO.from(artisan);
+        ArtisanDirectoryCardDTO dto = ArtisanDirectoryCardDTO.from(artisan, false, true, true);
 
         assertThat(dto).isNotNull();
         assertThat(dto.getId()).isEqualTo("artisan-uuid-123");

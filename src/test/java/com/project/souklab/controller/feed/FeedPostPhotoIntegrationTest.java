@@ -2,6 +2,7 @@ package com.project.souklab.controller.feed;
 
 import com.jayway.jsonpath.JsonPath;
 import com.project.souklab.model.AccountStatus;
+import com.project.souklab.model.AccountRole;
 import com.project.souklab.model.Artisan;
 import com.project.souklab.model.User;
 import com.project.souklab.service.notification.NotificationService;
@@ -73,6 +74,7 @@ class FeedPostPhotoIntegrationTest {
     void setUp() {
         artisanUser = User.builder()
                 .email(ARTISAN_EMAIL)
+                .accountRole(AccountRole.ARTISAN)
                 .firstName("Karim")
                 .lastName("Meziane")
                 .status(AccountStatus.ACTIVE)
@@ -91,6 +93,7 @@ class FeedPostPhotoIntegrationTest {
 
         adminUser = User.builder()
                 .email(ADMIN_EMAIL)
+                .accountRole(AccountRole.ADMIN)
                 .firstName("Admin")
                 .lastName("Moderator")
                 .status(AccountStatus.ACTIVE)

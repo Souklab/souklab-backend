@@ -1,4 +1,6 @@
 package com.project.souklab.service.subscription;
+
+import com.project.souklab.model.AccountRole;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -212,7 +214,7 @@ public class ChargilyWebhookService {
                 return;
             }
             activate(subscription, startsAt);
-            if (subscription.getAccount().getArtisan() != null) {
+            if (subscription.getAccount().getAccountRole() == AccountRole.ARTISAN) {
                 subscription.getAccount().getArtisan().setPremium(true);
             }
         });
@@ -227,7 +229,7 @@ public class ChargilyWebhookService {
                 return;
             }
             activate(subscription, startsAt);
-            if (subscription.getAccount().getClient() != null) {
+            if (subscription.getAccount().getAccountRole() == AccountRole.CLIENT) {
                 subscription.getAccount().getClient().setPremium(true);
             }
         });

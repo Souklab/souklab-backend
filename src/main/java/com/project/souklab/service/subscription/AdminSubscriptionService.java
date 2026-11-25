@@ -1,5 +1,7 @@
 package com.project.souklab.service.subscription;
 
+import com.project.souklab.model.AccountRole;
+
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.project.souklab.analytics.AnalyticsEvent;
@@ -119,7 +121,10 @@ public class AdminSubscriptionService {
             SubscriptionStatus previous = subscription.getStatus(); subscription.setStatus(SubscriptionStatus.REVOKED);
             recordSubscriptionEvent(subscription.getAccount(), subscription.getId(), AnalyticsEvent.Subscription.REVOKED);
             cancelPendingPayments(subscriptionId);
-            if (subscription.getAccount().getArtisan() != null) subscription.getAccount().getArtisan().setPremium(false);
+            if (subscription.getAccount().getAccountRole() == AccountRole.ARTISAN
+                    && subscription.getAccount().getArtisan() != null) {
+                subscription.getAccount().getArtisan().setPremium(false);
+            }
             auditLogService.logFinancialState(AuditLogAction.Subscription.REVOKED, actor, subscription.getAccount().getId(), FinancialAuditOperation.Subscription.REVOKE, previous, SubscriptionStatus.REVOKED, request.getReason(), null, subscriptionId);
             notificationService.createForUser(subscription.getAccount(), "Your subscription was revoked.", NotificationType.Subscription.REVOKED, subscriptionId);
         }, () -> clientSubscriptions.findWithLockById(subscriptionId).ifPresentOrElse(subscription -> {
@@ -127,7 +132,10 @@ public class AdminSubscriptionService {
             SubscriptionStatus previous = subscription.getStatus(); subscription.setStatus(SubscriptionStatus.REVOKED);
             recordSubscriptionEvent(subscription.getAccount(), subscription.getId(), AnalyticsEvent.Subscription.REVOKED);
             cancelPendingPayments(subscriptionId);
-            if (subscription.getAccount().getClient() != null) subscription.getAccount().getClient().setPremium(false);
+            if (subscription.getAccount().getAccountRole() == AccountRole.CLIENT
+                    && subscription.getAccount().getClient() != null) {
+                subscription.getAccount().getClient().setPremium(false);
+            }
             auditLogService.logFinancialState(AuditLogAction.Subscription.REVOKED, actor, subscription.getAccount().getId(), FinancialAuditOperation.Subscription.REVOKE, previous, SubscriptionStatus.REVOKED, request.getReason(), null, subscriptionId);
             notificationService.createForUser(subscription.getAccount(), "Your subscription was revoked.", NotificationType.Subscription.REVOKED, subscriptionId);
         }, () -> { throw new ResourceNotFoundException("Subscription not found"); }));
@@ -251,13 +259,15 @@ public class AdminSubscriptionService {
     }
 
     private void syncArtisanPremium(ArtisanSubscription subscription) {
-        if (subscription.getAccount().getArtisan() != null) {
+        if (subscription.getAccount().getAccountRole() == AccountRole.ARTISAN
+                && subscription.getAccount().getArtisan() != null) {
             subscription.getAccount().getArtisan().setPremium(subscription.getStatus() == SubscriptionStatus.ACTIVE);
         }
     }
 
     private void syncClientPremium(ClientSubscription subscription) {
-        if (subscription.getAccount().getClient() != null) {
+        if (subscription.getAccount().getAccountRole() == AccountRole.CLIENT
+                && subscription.getAccount().getClient() != null) {
             subscription.getAccount().getClient().setPremium(subscription.getStatus() == SubscriptionStatus.ACTIVE);
         }
     }

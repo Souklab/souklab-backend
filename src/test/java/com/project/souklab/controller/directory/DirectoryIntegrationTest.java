@@ -9,6 +9,10 @@ import com.project.souklab.dao.RegionRepository;
 import com.project.souklab.dao.TechniqueRepository;
 import com.project.souklab.dao.UserRepository;
 import com.project.souklab.model.AccountStatus;
+import com.project.souklab.model.AccountRole;
+import com.project.souklab.model.ArtisanSubscription;
+import com.project.souklab.model.BillingPeriod;
+import com.project.souklab.model.SubscriptionStatus;
 import com.project.souklab.model.Artisan;
 import com.project.souklab.model.Epoque;
 import com.project.souklab.model.JobSubCategory;
@@ -29,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 
 import static org.hamcrest.Matchers.hasItem;
@@ -119,6 +124,7 @@ class DirectoryIntegrationTest {
                 .email("ahmed.belkacem.integration@souklab.dz")
                 .firstName("Ahmed")
                 .lastName("Belkacem")
+                .accountRole(AccountRole.ARTISAN)
                 .status(AccountStatus.ACTIVE)
                 .build();
         entityManager.persist(user1);
@@ -143,10 +149,24 @@ class DirectoryIntegrationTest {
         entityManager.persist(premierArtisan);
         user1.setArtisan(premierArtisan);
 
+        ArtisanSubscription premiumSubscription = new ArtisanSubscription();
+        premiumSubscription.setAccount(user1);
+        premiumSubscription.setStatus(SubscriptionStatus.ACTIVE);
+        premiumSubscription.setPlanId("directory-integration-premium");
+        premiumSubscription.setPlanName("Directory integration premium");
+        premiumSubscription.setBillingPeriod(BillingPeriod.MONTHLY);
+        premiumSubscription.setAmount(100L);
+        premiumSubscription.setCurrency("DZD");
+        premiumSubscription.setEntitlementsSnapshot("{}");
+        premiumSubscription.setStartsAt(LocalDateTime.now().minusMinutes(1));
+        premiumSubscription.setExpiresAt(LocalDateTime.now().plusDays(30));
+        entityManager.persist(premiumSubscription);
+
         User user2 = User.builder()
                 .email("yacine.mansouri.integration@souklab.dz")
                 .firstName("Yacine")
                 .lastName("Mansouri")
+                .accountRole(AccountRole.ARTISAN)
                 .status(AccountStatus.ACTIVE)
                 .build();
         entityManager.persist(user2);
@@ -246,6 +266,20 @@ class DirectoryIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content[*].artisanName").value(hasItem("Yacine Mansouri")))
                 .andExpect(jsonPath("$.data.content[*].artisanName").value(not(hasItem("Ahmed Belkacem"))));
+    }
+
+    @Test
+    @DisplayName("Directory: non-premium artisans see their own name while other names stay masked")
+    void nonPremiumArtisanSeesOwnNameButOtherArtisansAreMasked() throws Exception {
+        String maskedPremierName = "Artisan #" + premierArtisan.getId()
+                .substring(premierArtisan.getId().length() - 5).toUpperCase(Locale.ROOT);
+
+        mockMvc.perform(get("/api/v1/public/directory")
+                        .with(user("yacine.mansouri.integration@souklab.dz"))
+                        .param("size", "100"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[*].artisanName").value(hasItem("Yacine Mansouri")))
+                .andExpect(jsonPath("$.data.content[*].artisanName").value(hasItem(maskedPremierName)));
     }
 
     /**

@@ -1,5 +1,7 @@
 package com.project.souklab.service.directory;
 
+import com.project.souklab.access.CapabilityService;
+import com.project.souklab.access.ViewerContext;
 import com.project.souklab.analytics.AnalyticsMetric;
 import com.project.souklab.config.DirectoryProperties;
 import com.project.souklab.config.OperationalMetrics;
@@ -44,6 +46,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.time.Clock;
+import java.time.Instant;
+import java.util.Collection;
+import java.util.Map;
 
 /**
  * Production implementation of {@link DirectorySearchService}.
@@ -71,29 +78,42 @@ public class DirectorySearchServiceImpl implements DirectorySearchService {
     private final DirectoryProperties directoryProperties;
     private final OperationalMetrics metrics;
     private final ViewerPremiumResolver viewerPremiumResolver;
+    private final CapabilityService capabilityService;
+    private final Clock clock;
 
     public DirectorySearchServiceImpl(EntityManager entityManager, ArtisanRepository artisanRepository,
                                       SearchProperties searchProperties, DirectoryProperties directoryProperties) {
-        this(entityManager, artisanRepository, searchProperties, directoryProperties, OperationalMetrics.noop(), null);
+        this(entityManager, artisanRepository, searchProperties, directoryProperties, OperationalMetrics.noop(), null, null, null);
     }
 
     public DirectorySearchServiceImpl(EntityManager entityManager, ArtisanRepository artisanRepository,
                                       SearchProperties searchProperties, DirectoryProperties directoryProperties,
                                       OperationalMetrics metrics) {
-        this(entityManager, artisanRepository, searchProperties, directoryProperties, metrics, null);
+        this(entityManager, artisanRepository, searchProperties, directoryProperties, metrics, null, null, null);
+    }
+
+    public DirectorySearchServiceImpl(EntityManager entityManager, ArtisanRepository artisanRepository,
+                                      SearchProperties searchProperties, DirectoryProperties directoryProperties,
+                                      OperationalMetrics metrics,
+                                      ViewerPremiumResolver viewerPremiumResolver) {
+        this(entityManager, artisanRepository, searchProperties, directoryProperties, metrics,
+                viewerPremiumResolver, null, null);
     }
 
     @Autowired
     public DirectorySearchServiceImpl(EntityManager entityManager, ArtisanRepository artisanRepository,
                                       SearchProperties searchProperties, DirectoryProperties directoryProperties,
                                       OperationalMetrics metrics,
-                                      ViewerPremiumResolver viewerPremiumResolver) {
+                                      ViewerPremiumResolver viewerPremiumResolver,
+                                      CapabilityService capabilityService, Clock clock) {
         this.entityManager = entityManager;
         this.artisanRepository = artisanRepository;
         this.searchProperties = searchProperties;
         this.directoryProperties = directoryProperties;
         this.metrics = metrics;
         this.viewerPremiumResolver = viewerPremiumResolver;
+        this.capabilityService = capabilityService;
+        this.clock = clock;
     }
 
     @Override
@@ -154,8 +174,10 @@ public class DirectorySearchServiceImpl implements DirectorySearchService {
                 .loading(o -> o.graph("artisan.directory", GraphSemantic.FETCH))
                 .fetch(offset, size);
 
-        List<ArtisanDirectoryCardDTO> content = result.hits().stream()
-                .map(artisan -> ArtisanDirectoryCardDTO.from(artisan, contactInfoLocked))
+        List<Artisan> hits = result.hits();
+        Map<String, ViewerContext> contexts = resolveContexts(hits);
+        List<ArtisanDirectoryCardDTO> content = hits.stream()
+                .map(artisan -> toDirectoryCard(artisan, contactInfoLocked, contexts))
                 .toList();
 
         long totalElements = result.total().hitCount();
@@ -333,8 +355,30 @@ public class DirectorySearchServiceImpl implements DirectorySearchService {
                 sort);
 
         Page<Artisan> page = artisanRepository.findAll(spec, pageable);
-        Page<ArtisanDirectoryCardDTO> dtoPage = page.map(artisan -> ArtisanDirectoryCardDTO.from(artisan, contactInfoLocked));
+        Map<String, ViewerContext> contexts = resolveContexts(page.getContent());
+        Page<ArtisanDirectoryCardDTO> dtoPage = page.map(artisan -> toDirectoryCard(artisan, contactInfoLocked, contexts));
         return PaginatedResponse.from(dtoPage);
+    }
+
+    private Map<String, ViewerContext> resolveContexts(Collection<Artisan> artisans) {
+        if (capabilityService == null || artisans.isEmpty()) return Map.of();
+        return capabilityService.computeAll(artisans.stream().map(Artisan::getUser)
+                .filter(Objects::nonNull).toList(), Instant.now(clock));
+    }
+
+    private ArtisanDirectoryCardDTO toDirectoryCard(Artisan artisan, boolean viewerLocked,
+                                                    Map<String, ViewerContext> contexts) {
+        User user = artisan != null ? artisan.getUser() : null;
+        ViewerContext context = user == null || user.getId() == null ? null : contexts.get(user.getId());
+        return ArtisanDirectoryCardDTO.from(artisan,
+                isContactInfoLockedForDirectoryRow(artisan, viewerLocked),
+                context != null && context.premiumStatus().active(),
+                context != null && context.formateur());
+    }
+
+    private boolean isContactInfoLockedForDirectoryRow(Artisan artisan, boolean viewerIsLocked) {
+        return viewerIsLocked && (viewerPremiumResolver == null
+                || !viewerPremiumResolver.isSelf(artisan != null ? artisan.getUser() : null));
     }
 
     /**

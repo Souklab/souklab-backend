@@ -1,5 +1,7 @@
 package com.project.souklab.service.artisan;
 
+import com.project.souklab.access.CapabilityService;
+import com.project.souklab.access.Capability;
 import com.project.souklab.dao.ArtisanCertificationRepository;
 import com.project.souklab.dao.ArtisanGalleryImageRepository;
 import com.project.souklab.dao.ArtisanRepository;
@@ -19,7 +21,6 @@ import com.project.souklab.model.AccountStatus;
 import com.project.souklab.model.Artisan;
 import com.project.souklab.model.ArtisanCertification;
 import com.project.souklab.model.User;
-import com.project.souklab.security.Permission;
 import com.project.souklab.security.ViewerPremiumResolver;
 import com.project.souklab.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -50,6 +53,8 @@ public class ArtisanProfileService {
     private final ArtisanCertificationRepository artisanCertificationRepository;
     private final ViewerPremiumResolver viewerPremiumResolver;
     private final ArtisanProfileViewRecorder artisanProfileViewRecorder;
+    private final CapabilityService capabilityService;
+    private final Clock clock;
 
     /**
      * Retrieves an artisan's profile for authenticated viewers.
@@ -70,8 +75,7 @@ public class ArtisanProfileService {
         User viewer = userRepository.findByEmail(email.toLowerCase(Locale.ROOT))
                 .orElseThrow(() -> new ResourceNotFoundException(ERROR_USER_NOT_FOUND_PREFIX + email));
 
-        boolean isAdmin = viewer.getPermissions().stream()
-                .anyMatch(permission -> Permission.Admin.USERS.matches(permission.getPermissionKey()));
+        boolean isAdmin = capabilityService.compute(viewer, Instant.now(clock)).can(Capability.MANAGE_USERS);
 
         verifyViewerAccess(viewer, isAdmin);
 
@@ -141,7 +145,7 @@ public class ArtisanProfileService {
                 .certifications(certificationDTOs)
                 .rating(0.0)
                 .reviewsCount(0)
-                .teacher(artisan.isTeacher())
+                .teacher(targetUser != null && capabilityService.compute(targetUser, Instant.now(clock)).formateur())
                 .verified(artisan.isVerified())
                 .avatarUrl(targetUser != null ? targetUser.getAvatarUrl() : null)
                 .createdAt(artisan.getCreatedAt())

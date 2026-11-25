@@ -1,5 +1,9 @@
 package com.project.souklab.service.formation;
 
+import java.util.Optional;
+
+import com.project.souklab.access.CapabilityService;
+import com.project.souklab.access.ViewerContext;
 import java.util.Map;
 import com.project.souklab.util.LogSanitizer;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +45,7 @@ import com.project.souklab.model.FormationEnrollment;
 import com.project.souklab.model.FormationFile;
 import com.project.souklab.model.FormationReview;
 import com.project.souklab.model.FormationStatus;
+import com.project.souklab.model.User;
 import com.project.souklab.model.NotificationType;
 import com.project.souklab.service.notification.NotificationService;
 import com.project.souklab.util.ArtisanSecurityUtils;
@@ -56,6 +61,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 
 import java.io.IOException;
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -84,6 +90,7 @@ public class FormationService {
     private final AppStorageProperties appStorageProperties;
     private final NotificationService notificationService;
     private final Clock clock;
+    private final CapabilityService capabilityService;
     private ActivityEventService activityEventService;
 
     @Autowired(required = false)
@@ -99,7 +106,8 @@ public class FormationService {
     @Transactional
     public FormationResponseDTO createFormation(FormationCreateDTO dto) {
         Artisan artisan = resolveAuthenticatedArtisan();
-        if (!artisan.isTeacher()) {
+        ViewerContext viewerContext = capabilityService.compute(artisan.getUser(), Instant.now(clock));
+        if (!viewerContext.formateur()) {
             throw new ForbiddenException("Only accredited master artisans can create formations.");
         }
 
@@ -391,10 +399,11 @@ public class FormationService {
             enrollment.setStatus(EnrollmentStatus.CANCELLED);
             formationEnrollmentRepository.save(enrollment);
 
-            if (enrollment.getArtisan() != null && enrollment.getArtisan().getUser() != null) {
+            User enrolledUser = Optional.ofNullable(enrollment.getArtisan()).map(Artisan::getUser).orElse(null);
+            if (enrolledUser != null) {
                 String message = "The masterclass '" + formation.getTitle() + "' has been cancelled by the instructor.";
                 notificationService.createForUser(
-                        enrollment.getArtisan().getUser(),
+                        enrolledUser,
                         message,
                         NotificationType.Formation.CANCELLED,
                         formation.getId()
@@ -556,7 +565,8 @@ public class FormationService {
         List<FormationFile> activeFiles = formationFileRepository.findByFormationIdAndDeletedAtIsNull(formation.getId());
         List<FormationReview> reviews = formationReviewRepository.findByFormationIdOrderByReviewedAtDesc(formation.getId());
         long activeEnrollments = formationEnrollmentRepository.countByFormationIdAndStatus(formation.getId(), EnrollmentStatus.CONFIRMED);
-        return FormationResponseDTO.from(formation, activeFiles, reviews, activeEnrollments, appStorageProperties.resolveFileServingPrefix());
+        return FormationResponseDTO.from(formation, activeFiles, reviews, activeEnrollments,
+                appStorageProperties.resolveFileServingPrefix(), isAuthorFormateur(formation));
     }
 
     /**
@@ -567,6 +577,11 @@ public class FormationService {
      */
     private FormationSummaryDTO mapToSummaryDTO(Formation formation) {
         long activeEnrollments = formationEnrollmentRepository.countByFormationIdAndStatus(formation.getId(), EnrollmentStatus.CONFIRMED);
-        return FormationSummaryDTO.from(formation, activeEnrollments);
+        return FormationSummaryDTO.from(formation, activeEnrollments, isAuthorFormateur(formation));
+    }
+
+    private boolean isAuthorFormateur(Formation formation) {
+        User author = formation == null || formation.getAuthor() == null ? null : formation.getAuthor().getUser();
+        return author != null && capabilityService.compute(author, Instant.now(clock)).formateur();
     }
 }

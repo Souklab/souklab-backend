@@ -216,7 +216,7 @@ public class AuthService {
         Set<AuthorizationPermission> permissions = permissionsForRegistration(role == AccountRole.ARTISAN);
         AccountStatus initialStatus = role == AccountRole.ARTISAN ? AccountStatus.PENDING : AccountStatus.ACTIVE;
 
-        User savedUser = userRepository.save(buildNewUser(dto, email, permissions, initialStatus));
+        User savedUser = userRepository.save(buildNewUser(dto, email, role, permissions, initialStatus));
         if (role == AccountRole.CLIENT && clientRepository != null) {
             Client client = Client.builder()
                     .user(savedUser)
@@ -688,7 +688,7 @@ public class AuthService {
      * @param initialStatus the initial {@link AccountStatus} derived from the role
      * @return a fully constructed but not yet persisted {@link User} entity
      */
-    private User buildNewUser(UserRegistrationDTO dto, String email, Set<AuthorizationPermission> permissions, AccountStatus initialStatus) {
+    private User buildNewUser(UserRegistrationDTO dto, String email, AccountRole role, Set<AuthorizationPermission> permissions, AccountStatus initialStatus) {
         String firstName = dto.getFirstName();
         String lastName = dto.getLastName();
         if ((firstName == null || firstName.isBlank()) && dto.getName() != null && !dto.getName().isBlank()) {
@@ -703,6 +703,7 @@ public class AuthService {
                 .firstName(firstName)
                 .lastName(lastName)
                 .status(initialStatus)
+                .accountRole(role)
                 .emailVerified(false)
                 .permissions(permissions)
                 .build();
@@ -846,6 +847,7 @@ public class AuthService {
                 .lastName(lastName)
                 .avatarUrl(picture)
                 .status(initialStatus)
+                .accountRole(role)
                 .emailVerified(true)
                 .emailVerifiedAt(LocalDateTime.now(clock))
                 .permissions(permissionsForRegistration(artisan))

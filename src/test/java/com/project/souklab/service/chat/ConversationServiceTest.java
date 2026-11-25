@@ -17,6 +17,10 @@ import com.project.souklab.exception.ForbiddenException;
 import com.project.souklab.filestorage.StorageService;
 import com.project.souklab.filestorage.validation.FileValidator;
 import com.project.souklab.model.*;
+import com.project.souklab.access.Capability;
+import com.project.souklab.access.CapabilityService;
+import com.project.souklab.access.PremiumStatus;
+import com.project.souklab.access.ViewerContext;
 import com.project.souklab.security.Permission;
 import com.project.souklab.service.notification.NotificationService;
 import com.project.souklab.service.user.CurrentUserProvider;
@@ -41,6 +45,7 @@ import java.time.ZoneOffset;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -59,6 +64,7 @@ class ConversationServiceTest {
     @Mock SimpMessagingTemplate messagingTemplate;
     @Mock StorageService storageService;
     @Mock FileValidator fileValidator;
+    @Mock CapabilityService capabilityService;
     @InjectMocks ConversationService service;
 
     private final Clock clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
@@ -80,7 +86,17 @@ class ConversationServiceTest {
         storageProperties.setFileServingPrefix("/api/v1/files/");
         chatProperties = new ChatProperties();
         chatProperties.setMessageMaxLength(4000); chatProperties.setAttachmentMaxCount(5); chatProperties.setCursorLifetime(Duration.ofHours(24)); chatProperties.setTypingEventInterval(Duration.ofMillis(500)); chatProperties.setDefaultPageSize(50); chatProperties.setMinPageSize(1); chatProperties.setMaxPageSize(100); chatProperties.setWebsocketProtocolVersion("v1"); chatProperties.setEventDestination("/queue/chat/events"); chatProperties.setMessageDestinationPrefix("/queue/chat");
-        service = new ConversationService(conversationRepository, participantRepository, messageRepository, uploadRepository, userRepository, currentUserProvider, notificationService, messagingTemplate, chatProperties, storageProperties, clock, storageService, fileValidator);
+        lenient().when(capabilityService.compute(any(), any())).thenAnswer(invocation -> {
+            User viewer = invocation.getArgument(0);
+            boolean premium = viewer.getAccountRole() == AccountRole.ADMIN || viewer.getClient() == null || viewer.getClient().isPremium();
+            boolean canMessage = viewer.getPermissions().stream().anyMatch(permission -> permission.isEnabled() && Permission.Message.SEND.matches(permission.getPermissionKey()));
+            Set<Capability> capabilities = new HashSet<>();
+            if (premium && canMessage) capabilities.add(Capability.SEND_MESSAGE);
+            if (premium) capabilities.add(Capability.VIEW_ARTISAN_IDENTITY);
+            return new ViewerContext(viewer.getId(), viewer.getAccountRole(),
+                    new PremiumStatus(premium, null, false, null, false), capabilities, false);
+        });
+        service = new ConversationService(conversationRepository, participantRepository, messageRepository, uploadRepository, userRepository, currentUserProvider, notificationService, messagingTemplate, chatProperties, storageProperties, clock, storageService, fileValidator, capabilityService);
     }
 
     @Test
@@ -725,6 +741,7 @@ class ConversationServiceTest {
 
         recipient.setFirstName("Mohamed");
         recipient.setLastName("Artisan");
+        recipient.setAccountRole(AccountRole.ARTISAN);
         Artisan artisan = Artisan.builder().id("art-abcde12345").user(recipient).build();
         recipient.setArtisan(artisan);
 
@@ -747,6 +764,7 @@ class ConversationServiceTest {
 
         recipient.setFirstName("Mohamed");
         recipient.setLastName("Artisan");
+        recipient.setAccountRole(AccountRole.ARTISAN);
         Artisan artisan = Artisan.builder().id("art-abcde12345").user(recipient).build();
         recipient.setArtisan(artisan);
 
@@ -770,9 +788,11 @@ class ConversationServiceTest {
         adminPerm.setPermissionKey(Permission.Admin.USERS.value());
         adminPerm.setEnabled(true);
         sender.addPermission(adminPerm);
+        sender.setAccountRole(AccountRole.ADMIN);
 
         recipient.setFirstName("Mohamed");
         recipient.setLastName("Artisan");
+        recipient.setAccountRole(AccountRole.ARTISAN);
         Artisan artisan = Artisan.builder().id("art-abcde12345").user(recipient).build();
         recipient.setArtisan(artisan);
 
@@ -809,7 +829,7 @@ class ConversationServiceTest {
         assertThat(response.participantLastReadMessageId()).isEqualTo("msg-partner-200");
     }
 
-    private User user(String id, String email, AccountStatus status, boolean verified) { User user = new User(); user.setId(id); user.setEmail(email); user.setStatus(status); user.setEmailVerified(verified); AuthorizationPermission permission = new AuthorizationPermission(); permission.setPermissionKey(Permission.Message.SEND.value()); permission.setEnabled(true); user.setPermissions(new HashSet<>(List.of(permission))); return user; }
+    private User user(String id, String email, AccountStatus status, boolean verified) { User user = new User(); user.setId(id); user.setEmail(email); user.setStatus(status); user.setAccountRole(AccountRole.CLIENT); user.setEmailVerified(verified); AuthorizationPermission permission = new AuthorizationPermission(); permission.setPermissionKey(Permission.Message.SEND.value()); permission.setEnabled(true); user.setPermissions(new HashSet<>(List.of(permission))); return user; }
     private ConversationParticipant participant(User user) { ConversationParticipant p = new ConversationParticipant(); p.setUser(user); return p; }
     private Message message(String id, User author, String content) { Message m = new Message(); m.setId(id); m.setConversation(conversation); m.setAuthor(author); m.setContent(content); m.setCreatedAt(LocalDateTime.now(clock)); return m; }
 }

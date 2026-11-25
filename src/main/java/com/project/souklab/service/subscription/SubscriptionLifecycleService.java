@@ -1,5 +1,8 @@
 package com.project.souklab.service.subscription;
 
+import com.project.souklab.access.CapabilityService;
+import com.project.souklab.model.AccountRole;
+
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -53,8 +56,11 @@ public class SubscriptionLifecycleService {
         LocalDateTime now = LocalDateTime.now(clock.withZone(ZoneId.of(subscriptionProperties.getLifecycleTimeZone())));
         expirePendingPayments(now);
         PageRequest batch = PageRequest.of(0, subscriptionProperties.getLifecycleBatchSize());
-        artisanSubscriptions.findByStatusAndExpiresAtBefore(SubscriptionStatus.ACTIVE, now, batch).forEach(this::expire);
-        clientSubscriptions.findByStatusAndExpiresAtBefore(SubscriptionStatus.ACTIVE, now, batch).forEach(this::expire);
+        LocalDateTime graceCutoff = now.minus(CapabilityService.PREMIUM_GRACE);
+        artisanSubscriptions.findByStatusAndExpiresAtBefore(SubscriptionStatus.ACTIVE, graceCutoff, batch)
+                .forEach(this::expire);
+        clientSubscriptions.findByStatusAndExpiresAtBefore(SubscriptionStatus.ACTIVE, graceCutoff, batch)
+                .forEach(this::expire);
         sendReminders(now);
         releaseStaleWebhookClaims(now);
         releaseExpiredWebhookLogs(now);
@@ -109,7 +115,7 @@ public class SubscriptionLifecycleService {
     private void expire(ArtisanSubscription subscription) {
         subscription.setStatus(SubscriptionStatus.EXPIRED);
         recordSubscriptionExpiry(subscription);
-        if (subscription.getAccount().getArtisan() != null && artisanSubscriptions.countByAccountIdAndStatus(subscription.getAccount().getId(), SubscriptionStatus.ACTIVE) == 0) {
+        if (subscription.getAccount().getAccountRole() == AccountRole.ARTISAN && artisanSubscriptions.countByAccountIdAndStatus(subscription.getAccount().getId(), SubscriptionStatus.ACTIVE) == 0) {
             subscription.getAccount().getArtisan().setPremium(false);
         }
         notificationService.createForUser(subscription.getAccount(), "Your artisan subscription has expired.", NotificationType.Subscription.EXPIRED, subscription.getId());
@@ -118,7 +124,7 @@ public class SubscriptionLifecycleService {
     private void expire(ClientSubscription subscription) {
         subscription.setStatus(SubscriptionStatus.EXPIRED);
         recordSubscriptionExpiry(subscription);
-        if (subscription.getAccount().getClient() != null && clientSubscriptions.countByAccountIdAndStatus(subscription.getAccount().getId(), SubscriptionStatus.ACTIVE) == 0) {
+        if (subscription.getAccount().getAccountRole() == AccountRole.CLIENT && clientSubscriptions.countByAccountIdAndStatus(subscription.getAccount().getId(), SubscriptionStatus.ACTIVE) == 0) {
             subscription.getAccount().getClient().setPremium(false);
         }
         notificationService.createForUser(subscription.getAccount(), "Your client subscription has expired.", NotificationType.Subscription.EXPIRED, subscription.getId());

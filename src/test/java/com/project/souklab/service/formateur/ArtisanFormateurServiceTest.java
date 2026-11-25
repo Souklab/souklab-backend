@@ -1,4 +1,8 @@
 package com.project.souklab.service.formateur;
+
+import com.project.souklab.access.CapabilityService;
+import com.project.souklab.access.PremiumStatus;
+import com.project.souklab.access.ViewerContext;
 import com.project.souklab.security.Permission;
 import com.project.souklab.config.ArtisanProperties;
 import com.project.souklab.dao.ArtisanFormateurRequestRepository;
@@ -17,6 +21,7 @@ import com.project.souklab.exception.ConflictException;
 import com.project.souklab.exception.ForbiddenException;
 import com.project.souklab.exception.ResourceNotFoundException;
 import com.project.souklab.model.AccountStatus;
+import com.project.souklab.model.AccountRole;
 import com.project.souklab.model.Artisan;
 import com.project.souklab.model.ArtisanFormateurRequest;
 import com.project.souklab.model.FormateurRequestStatus;
@@ -46,6 +51,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -84,6 +90,9 @@ class ArtisanFormateurServiceTest {
     private EmailUtil emailUtil;
 
     @Mock
+    private CapabilityService capabilityService;
+
+    @Mock
     private SecurityContext securityContext;
 
     @Mock
@@ -108,7 +117,8 @@ class ArtisanFormateurServiceTest {
                 notificationService,
                 emailUtil,
                 properties,
-                clock
+                clock,
+                capabilityService
         );
 
         lenient().when(securityContext.getAuthentication()).thenReturn(authentication);
@@ -129,6 +139,13 @@ class ArtisanFormateurServiceTest {
                 .user(artisanUser)
                 .isTeacher(false)
                 .build();
+        artisanUser.setArtisan(artisanProfile);
+        lenient().when(capabilityService.compute(any(User.class), any(Instant.class)))
+                .thenAnswer(invocation -> {
+                    User subject = invocation.getArgument(0);
+                    boolean formateur = subject.getArtisan() != null && subject.getArtisan().isTeacher();
+                    return new ViewerContext(subject.getId(), AccountRole.ARTISAN, PremiumStatus.none(), Set.of(), formateur);
+                });
 
         adminUser = User.builder()
                 .email("admin@example.com")

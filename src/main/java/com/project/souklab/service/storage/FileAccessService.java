@@ -160,6 +160,6 @@ public class FileAccessService {
 
     private boolean isAdministrator() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        return accessControlService.hasPermission(authentication, Permission.Admin.USERS);
+        return accessControlService.canManageUsers(authentication);
     }
 }

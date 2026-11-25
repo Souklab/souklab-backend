@@ -1,13 +1,27 @@
 package com.project.souklab.security;
 
+import com.project.souklab.access.Capability;
+import com.project.souklab.access.CapabilityService;
+import com.project.souklab.access.ViewerContext;
+import com.project.souklab.dao.UserRepository;
+import com.project.souklab.model.User;
+import com.project.souklab.model.AccountRole;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
-/**
- * Centralized authorization predicates for Spring method security and domain services.
- */
+import java.time.Clock;
+import java.time.Instant;
+import java.util.Locale;
+
+/** Centralized authorization predicates for Spring method security and domain services. */
 @Component("accessControl")
+@RequiredArgsConstructor
 public class AccessControlService {
+
+    private final UserRepository userRepository;
+    private final CapabilityService capabilityService;
+    private final Clock clock;
 
     public boolean hasPermission(Authentication authentication, Permission permission) {
         return authentication != null && authentication.isAuthenticated()
@@ -16,11 +30,12 @@ public class AccessControlService {
     }
 
     public boolean isAdmin(Authentication authentication) {
-        return hasPermission(authentication, Permission.Admin.USERS);
+        ViewerContext context = context(authentication);
+        return context != null && context.can(Capability.MANAGE_USERS);
     }
 
     public boolean canManageUsers(Authentication authentication) {
-        return hasPermission(authentication, Permission.Admin.USERS);
+        return isAdmin(authentication);
     }
 
     public boolean canManageFormations(Authentication authentication) {
@@ -56,7 +71,8 @@ public class AccessControlService {
     }
 
     public boolean isArtisan(Authentication authentication) {
-        return hasPermission(authentication, Permission.Artisan.CONTENT);
+        ViewerContext context = context(authentication);
+        return context != null && context.role() == AccountRole.ARTISAN;
     }
 
     public boolean canReadProfile(Authentication authentication) {
@@ -71,13 +87,16 @@ public class AccessControlService {
         return hasPermission(authentication, Permission.Admin.CATALOG);
     }
 
-    /**
-     * Determines whether the authenticated principal has permission to manage client favorites.
-     *
-     * @param authentication the current authentication token
-     * @return {@code true} if the principal holds {@link Permission.Client#FAVORITES}
-     */
+    /** Determines whether the authenticated principal may manage client favorites. */
     public boolean canManageFavorites(Authentication authentication) {
         return hasPermission(authentication, Permission.Client.FAVORITES);
+    }
+
+    private ViewerContext context(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated() || authentication.getName() == null) {
+            return null;
+        }
+        User user = userRepository.findByEmail(authentication.getName().toLowerCase(Locale.ROOT)).orElse(null);
+        return user == null ? null : capabilityService.compute(user, Instant.now(clock));
     }
 }

@@ -1,5 +1,7 @@
 package com.project.souklab.service.favorite;
 
+import com.project.souklab.access.CapabilityService;
+import com.project.souklab.access.ViewerContext;
 import com.project.souklab.util.LogSanitizer;
 import com.project.souklab.config.FavoritesProperties;
 import com.project.souklab.dao.ArtisanRepository;
@@ -32,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Production implementation of {@link ArtisanFavoriteService}.
@@ -56,6 +59,7 @@ public class ArtisanFavoriteServiceImpl implements ArtisanFavoriteService {
     private final FavoritesProperties favoritesProperties;
     private final Clock clock;
     private final ViewerPremiumResolver viewerPremiumResolver;
+    private final CapabilityService capabilityService;
 
     /**
      * Adds an artisan to the authenticated client's favorites list.
@@ -140,10 +144,19 @@ public class ArtisanFavoriteServiceImpl implements ArtisanFavoriteService {
 
         boolean contactInfoLocked = viewerPremiumResolver.isContactInfoLocked();
 
-        Page<ClientFavoriteArtisanItemDTO> dtoPage = page.map(fav -> ClientFavoriteArtisanItemDTO.builder()
+        var contexts = capabilityService.computeAll(page.getContent().stream()
+                .map(ClientFavoriteArtisan::getArtisan).map(Artisan::getUser)
+                .filter(Objects::nonNull).toList(), clock.instant());
+        Page<ClientFavoriteArtisanItemDTO> dtoPage = page.map(fav -> {
+            User artisanUser = fav.getArtisan().getUser();
+            ViewerContext context = artisanUser == null ? null : contexts.get(artisanUser.getId());
+            return ClientFavoriteArtisanItemDTO.builder()
                 .favoritedAt(fav.getCreatedAt())
-                .artisan(ArtisanDirectoryCardDTO.from(fav.getArtisan(), contactInfoLocked))
-                .build());
+                .artisan(ArtisanDirectoryCardDTO.from(fav.getArtisan(), contactInfoLocked,
+                        context != null && context.premiumStatus().active(),
+                        context != null && context.formateur()))
+                .build();
+        });
 
         return PaginatedResponse.from(dtoPage);
     }

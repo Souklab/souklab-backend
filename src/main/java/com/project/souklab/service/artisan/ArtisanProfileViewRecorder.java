@@ -69,8 +69,7 @@ public class ArtisanProfileViewRecorder {
             artisanRepository.incrementViewsCount(artisan.getId());
             if (activityEventService != null) {
                 activityEventService.record(AnalyticsEvent.Profile.VIEW, viewer.getId(), artisan.getId(),
-                        Map.of(AnalyticsMetadata.Account.TYPE, viewer.getArtisan() != null
-                                ? AccountRole.ARTISAN : AccountRole.CLIENT));
+                        Map.of(AnalyticsMetadata.Account.TYPE, viewer.getAccountRole()));
             }
         } catch (DataIntegrityViolationException e) {
             log.debug("Concurrent duplicate profile view ignored for viewer {} and artisan {}",

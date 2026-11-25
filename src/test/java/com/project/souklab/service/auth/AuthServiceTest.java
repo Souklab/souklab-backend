@@ -25,6 +25,7 @@ import com.project.souklab.dto.auth.VerifyEmailRequestDTO;
 import com.project.souklab.dto.profile.ArtisanResponseDTO;
 import com.project.souklab.dto.profile.ClientProfileResponseDTO;
 import com.project.souklab.dto.profile.ProfileResponse;
+import com.project.souklab.service.profile.ProfileResponseMapperTestFactory;
 import com.project.souklab.exception.AppException;
 import com.project.souklab.exception.BadRequestException;
 import com.project.souklab.exception.ConflictException;
@@ -134,7 +135,7 @@ class AuthServiceTest {
     @Mock
     private AuditLogService auditLogService;
 
-    private final ProfileResponseMapper profileResponseMapper = new ProfileResponseMapper();
+    private final ProfileResponseMapper profileResponseMapper = ProfileResponseMapperTestFactory.create();
 
     private JwtProperties jwtProperties;
     private AuthProperties authProperties;

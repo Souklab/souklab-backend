@@ -1,5 +1,7 @@
 package com.project.souklab.service.feed;
 
+import com.project.souklab.model.AccountRole;
+
 import java.util.Map;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -557,7 +559,8 @@ public class FeedPostService {
     }
 
     private boolean isVerifiedArtisan(User user) {
-        return user.getArtisan() != null && user.getArtisan().isVerified();
+        return user.getAccountRole() == AccountRole.ARTISAN
+                && user.getArtisan().isVerified();
     }
 
     private void requireAuthorOrAdmin(FeedPost post) {

@@ -1,5 +1,9 @@
 package com.project.souklab.service.artisan;
 
+import com.project.souklab.access.CapabilityService;
+import com.project.souklab.access.Capability;
+import com.project.souklab.access.PremiumStatus;
+import com.project.souklab.access.ViewerContext;
 import org.mockito.Mockito;
 
 import com.project.souklab.dao.ArtisanCertificationRepository;
@@ -11,6 +15,7 @@ import com.project.souklab.exception.ForbiddenException;
 import com.project.souklab.exception.ResourceNotFoundException;
 import com.project.souklab.exception.UnauthorizedException;
 import com.project.souklab.model.AccountStatus;
+import com.project.souklab.model.AccountRole;
 import com.project.souklab.model.Artisan;
 import com.project.souklab.model.ArtisanCertification;
 import com.project.souklab.model.ArtisanGalleryImage;
@@ -32,6 +37,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -39,12 +45,16 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -73,6 +83,12 @@ class ArtisanProfileServiceTest {
 
     @Mock
     private ViewerPremiumResolver viewerPremiumResolver;
+
+    @Mock
+    private CapabilityService capabilityService;
+
+    @Spy
+    private Clock clock = Clock.systemUTC();
 
     @InjectMocks
     private ArtisanProfileService artisanProfileService;
@@ -150,6 +166,7 @@ class ArtisanProfileServiceTest {
                 .emailVerified(true)
                 .build();
         targetUser.setId("artisan-user-id");
+        targetUser.setAccountRole(AccountRole.ARTISAN);
 
         targetArtisan = Artisan.builder()
                 .user(targetUser)
@@ -169,6 +186,17 @@ class ArtisanProfileServiceTest {
                 .isVerified(true)
                 .build();
         targetArtisan.setId("artisan-user-id");
+        lenient().when(capabilityService.compute(any(User.class),
+                any(Instant.class))).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            Set<Capability> capabilities = user.getAccountRole() == AccountRole.ADMIN
+                    ? Set.of(Capability.MANAGE_USERS, Capability.VIEW_ARTISAN_IDENTITY) : Set.of();
+            return new ViewerContext(user.getId(), user.getAccountRole() == null ? AccountRole.CLIENT : user.getAccountRole(),
+                    PremiumStatus.none(), capabilities, false);
+        });
+        lenient().when(capabilityService.compute(eq(targetUser),
+                any(Instant.class))).thenReturn(new ViewerContext(targetUser.getId(),
+                AccountRole.ARTISAN, PremiumStatus.none(), Set.of(), true));
     }
 
     /**
@@ -263,6 +291,7 @@ class ArtisanProfileServiceTest {
         setAuthenticatedViewer("admin@souklab.dz", Permission.Admin.USERS);
         User admin = User.builder()
                 .email("admin@souklab.dz")
+                .accountRole(AccountRole.ADMIN)
                 .status(AccountStatus.ACTIVE)
                 .permissions(Set.of(createPermission(Permission.Admin.USERS)))
                 .build();
@@ -311,6 +340,7 @@ class ArtisanProfileServiceTest {
         setAuthenticatedViewer("admin@souklab.dz", Permission.Admin.USERS);
         User admin = User.builder()
                 .email("admin@souklab.dz")
+                .accountRole(AccountRole.ADMIN)
                 .status(AccountStatus.SUSPENDED)
                 .emailVerified(false)
                 .permissions(Set.of(createPermission(Permission.Admin.USERS)))
@@ -483,6 +513,7 @@ class ArtisanProfileServiceTest {
         setAuthenticatedViewer("admin@souklab.dz", Permission.Admin.USERS);
         User admin = User.builder()
                 .email("admin@souklab.dz")
+                .accountRole(AccountRole.ADMIN)
                 .status(AccountStatus.SUSPENDED)
                 .emailVerified(false)
                 .permissions(Set.of(createPermission(Permission.Admin.USERS)))
@@ -550,6 +581,7 @@ class ArtisanProfileServiceTest {
         setAuthenticatedViewer("admin@souklab.dz", Permission.Admin.USERS);
         User admin = User.builder()
                 .email("admin@souklab.dz")
+                .accountRole(AccountRole.ADMIN)
                 .status(AccountStatus.ACTIVE)
                 .permissions(Set.of(createPermission(Permission.Admin.USERS)))
                 .build();

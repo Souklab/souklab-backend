@@ -1,4 +1,8 @@
 package com.project.souklab.service.formateur;
+import com.project.souklab.access.Capability;
+import com.project.souklab.access.CapabilityService;
+import com.project.souklab.access.PremiumStatus;
+import com.project.souklab.access.ViewerContext;
 import com.project.souklab.security.Permission;
 import com.project.souklab.config.ArtisanProperties;
 import com.project.souklab.dao.ArtisanFormateurRequestRepository;
@@ -6,6 +10,7 @@ import com.project.souklab.dao.ArtisanRepository;
 import com.project.souklab.dao.UserRepository;
 import com.project.souklab.dto.formateur.FormateurRequestDTO;
 import com.project.souklab.model.AccountStatus;
+import com.project.souklab.model.AccountRole;
 import com.project.souklab.model.Artisan;
 import com.project.souklab.model.ArtisanFormateurRequest;
 import com.project.souklab.model.FormateurRequestStatus;
@@ -28,8 +33,10 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.Clock;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -53,6 +60,9 @@ class ArtisanFormateurServiceNotificationTest {
     private NotificationService notificationService;
 
     @Mock
+    private CapabilityService capabilityService;
+
+    @Mock
     private EmailUtil emailUtil;
 
     @Spy
@@ -72,6 +82,9 @@ class ArtisanFormateurServiceNotificationTest {
 
     @BeforeEach
     void setUp() {
+        when(capabilityService.compute(any(), any(Instant.class)))
+                .thenReturn(new ViewerContext("user-1", AccountRole.ARTISAN,
+                        PremiumStatus.none(), Set.<Capability>of(), false));
         when(securityContext.getAuthentication()).thenReturn(authentication);
         when(authentication.isAuthenticated()).thenReturn(true);
         when(authentication.getName()).thenReturn("artisan@example.com");

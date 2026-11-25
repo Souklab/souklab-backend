@@ -1,5 +1,7 @@
 package com.project.souklab.service.profile;
 
+import com.project.souklab.access.CapabilityService;
+import com.project.souklab.access.ViewerContext;
 import com.project.souklab.dto.artisan.CertificationResponseDTO;
 import com.project.souklab.dto.artisan.GalleryImageResponseDTO;
 import com.project.souklab.dto.auth.UserSummaryDTO;
@@ -9,6 +11,7 @@ import com.project.souklab.dto.catalog.MaterialSummaryDTO;
 import com.project.souklab.dto.catalog.RegionSummaryDTO;
 import com.project.souklab.dto.catalog.TechniqueSummaryDTO;
 import com.project.souklab.dto.profile.ArtisanResponseDTO;
+import com.project.souklab.dto.profile.AdminProfileResponseDTO;
 import com.project.souklab.dto.profile.ClientProfileResponseDTO;
 import com.project.souklab.dto.profile.ProfileResponse;
 import com.project.souklab.model.Artisan;
@@ -16,25 +19,32 @@ import com.project.souklab.model.ArtisanGalleryImage;
 import com.project.souklab.model.Client;
 import com.project.souklab.model.ClientType;
 import com.project.souklab.model.User;
+import com.project.souklab.model.AccountRole;
 import com.project.souklab.model.AuthorizationPermission;
 import com.project.souklab.security.Permission;
 import org.springframework.stereotype.Component;
+import lombok.RequiredArgsConstructor;
 
 import java.util.Collections;
 import java.util.Comparator;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.Optional;
 
 /**
- * Stateless mapping component that converts {@link User} entities into
+ * Mapping component that converts {@link User} entities into
  * account-type-specific {@link ProfileResponse} subtypes and admin-facing {@link UserSummaryDTO}.
- * No repository or service dependencies are injected here; all data is resolved
- * from the entity graph passed in by the caller.
+ * Role, premium, and formateur fields come from the canonical capability service.
  */
 @Component
+@RequiredArgsConstructor
 public class ProfileResponseMapper {
+
+    private final CapabilityService capabilityService;
+    private final Clock clock;
 
 
     /**
@@ -45,17 +55,26 @@ public class ProfileResponseMapper {
      * @return the appropriate {@link ProfileResponse} subtype based on the user's permissions
      */
     public ProfileResponse mapToProfileResponse(User user) {
-        boolean isArtisan = user.getPermissions().stream()
-                .anyMatch(permission -> Permission.Artisan.CONTENT.matches(permission.getPermissionKey()));
-
+        ViewerContext viewerContext = capabilityService.compute(user, Instant.now(clock));
         Set<Permission> permissionKeys = user.getPermissions().stream()
                 .map(AuthorizationPermission::getPermissionKey)
                 .map(Permission::fromValue)
                 .flatMap(Optional::stream)
                 .collect(Collectors.toSet());
 
+        if (viewerContext.role() == AccountRole.ADMIN) {
+            return AdminProfileResponseDTO.builder()
+                    .id(user.getId()).email(user.getEmail()).firstName(user.getFirstName())
+                    .lastName(user.getLastName()).name(user.getName()).phone(user.getPhone())
+                    .avatarUrl(user.getAvatarUrl()).accountStatus(user.getStatus()).accountRole(AccountRole.ADMIN)
+                    .permissions(permissionKeys).emailVerified(user.isEmailVerified())
+                    .emailVerifiedAt(user.getEmailVerifiedAt()).createdAt(user.getCreatedAt())
+                    .updatedAt(user.getUpdatedAt()).build();
+        }
+        boolean isArtisan = viewerContext.role() == AccountRole.ARTISAN;
+
         if (isArtisan) {
-            return buildArtisanProfileResponse(user, permissionKeys);
+            return buildArtisanProfileResponse(user, permissionKeys, viewerContext);
         }
 
         return buildClientProfileResponse(user, permissionKeys);
@@ -70,11 +89,16 @@ public class ProfileResponseMapper {
      * @return a {@link UserSummaryDTO} populated with admin-visible fields
      */
     public UserSummaryDTO mapToSummaryDTO(User user) {
-        boolean isTeacher = user.getArtisan() != null && user.getArtisan().isTeacher();
-        boolean isPremium = (user.getArtisan() != null && user.getArtisan().isPremium())
-                || (user.getClient() != null && user.getClient().isPremium());
-        boolean isValidated = (user.getArtisan() != null && user.getArtisan().isVerified())
-                || (user.getClient() != null && user.getClient().isVerified());
+        ViewerContext viewerContext = capabilityService.compute(user, Instant.now(clock));
+        boolean isTeacher = viewerContext.formateur();
+        boolean isPremium = viewerContext.premiumStatus().active();
+        Artisan artisanProfile = user.getArtisan();
+        Client clientProfile = user.getClient();
+        boolean isValidated = switch (viewerContext.role()) {
+            case ARTISAN -> artisanProfile != null && artisanProfile.isVerified();
+            case CLIENT -> clientProfile != null && clientProfile.isVerified();
+            default -> false;
+        };
 
         return UserSummaryDTO.builder()
                 .id(user.getId())
@@ -84,6 +108,7 @@ public class ProfileResponseMapper {
                 .name(user.getName())
                 .permissions(canonicalPermissions(user))
                 .accountStatus(user.getStatus())
+                .accountRole(user.getAccountRole())
                 .isPremium(isPremium)
                 .isValidated(isValidated)
                 .isTeacher(isTeacher)
@@ -99,7 +124,8 @@ public class ProfileResponseMapper {
      * @param permissionKeys the set of permission keys assigned to the user
      * @return the fully populated {@link ArtisanResponseDTO}
      */
-    private ArtisanResponseDTO buildArtisanProfileResponse(User user, Set<Permission> permissionKeys) {
+    private ArtisanResponseDTO buildArtisanProfileResponse(User user, Set<Permission> permissionKeys,
+                                                           ViewerContext viewerContext) {
         Artisan profile = user.getArtisan();
         RegionSummaryDTO regionSummary = profile != null ? RegionSummaryDTO.from(profile.getRegion()) : null;
         JobSubCategorySummaryDTO subCategorySummary = profile != null ? JobSubCategorySummaryDTO.from(profile.getSubCategory()) : null;
@@ -140,6 +166,7 @@ public class ProfileResponseMapper {
                 .phone(user.getPhone())
                 .avatarUrl(user.getAvatarUrl())
                 .accountStatus(user.getStatus())
+                .accountRole(user.getAccountRole())
                 .permissions(permissionKeys)
                 .emailVerified(user.isEmailVerified())
                 .emailVerifiedAt(user.getEmailVerifiedAt())
@@ -158,9 +185,9 @@ public class ProfileResponseMapper {
                 .epoques(epoqueSummaries)
                 .galleryImages(gallerySummaries)
                 .certifications(certSummaries)
-                .teacher(profile != null && profile.isTeacher())
+                .teacher(viewerContext.formateur())
                 .verified(profile != null && profile.isVerified())
-                .premium(profile != null && profile.isPremium())
+                .premium(viewerContext.premiumStatus().active())
                 .rating(0.0)
                 .reviewsCount(0)
                 .build();
@@ -185,6 +212,7 @@ public class ProfileResponseMapper {
                 .phone(user.getPhone())
                 .avatarUrl(user.getAvatarUrl())
                 .accountStatus(user.getStatus())
+                .accountRole(user.getAccountRole())
                 .permissions(permissionKeys)
                 .emailVerified(user.isEmailVerified())
                 .emailVerifiedAt(user.getEmailVerifiedAt())

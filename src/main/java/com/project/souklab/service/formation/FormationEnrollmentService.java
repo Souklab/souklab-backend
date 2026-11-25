@@ -1,5 +1,6 @@
 package com.project.souklab.service.formation;
 
+import com.project.souklab.access.CapabilityService;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -44,6 +45,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -69,6 +71,7 @@ public class FormationEnrollmentService {
     private final StorageService storageService;
     private final FormationProperties formationProperties;
     private final Clock clock;
+    private final CapabilityService capabilityService;
     private ActivityEventService activityEventService;
 
     @Autowired(required = false)
@@ -103,7 +106,7 @@ public class FormationEnrollmentService {
 
         return formations.map(formation -> {
             long activeEnrollments = formationEnrollmentRepository.countByFormationIdAndStatus(formation.getId(), EnrollmentStatus.CONFIRMED);
-            return FormationSummaryDTO.from(formation, activeEnrollments);
+            return FormationSummaryDTO.from(formation, activeEnrollments, isAuthorFormateur(formation));
         });
     }
 
@@ -152,7 +155,8 @@ public class FormationEnrollmentService {
 
         List<FormationFile> activeFiles = formationFileRepository.findByFormationIdAndDeletedAtIsNull(formation.getId());
 
-        return FormationPublicViewDTO.from(formation, activeFiles, activeEnrollmentsCount, isEnrolled, isAuthor);
+        return FormationPublicViewDTO.from(formation, activeFiles, activeEnrollmentsCount, isEnrolled, isAuthor,
+                isAuthorFormateur(formation));
     }
 
     /**
@@ -328,8 +332,14 @@ public class FormationEnrollmentService {
                     enrollment.getFormation().getId(),
                     EnrollmentStatus.CONFIRMED
             );
-            return FormationEnrollmentDetailDTO.from(enrollment, activeCount);
+            return FormationEnrollmentDetailDTO.from(enrollment, activeCount,
+                    isAuthorFormateur(enrollment.getFormation()));
         });
+    }
+
+    private boolean isAuthorFormateur(Formation formation) {
+        User author = formation == null || formation.getAuthor() == null ? null : formation.getAuthor().getUser();
+        return author != null && capabilityService.compute(author, Instant.now(clock)).formateur();
     }
 
     /**
