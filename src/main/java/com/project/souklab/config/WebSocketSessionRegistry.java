@@ -2,6 +2,7 @@ package com.project.souklab.config;
 
 import com.project.souklab.security.JwtUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -24,6 +25,7 @@ public class WebSocketSessionRegistry {
     private final Map<String, Credentials> credentialsAwaitingTransport = new ConcurrentHashMap<>();
     private final boolean enabled;
 
+    @Autowired
     public WebSocketSessionRegistry(JwtUtils jwtUtils, UserDetailsService userDetailsService) {
         this(jwtUtils, userDetailsService, true);
     }
