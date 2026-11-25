@@ -19,6 +19,9 @@ public class MeCapabilitiesContributor {
     private final Clock clock;
 
     public ProfileResponse contribute(User user, ProfileResponse response) {
+        if (response.getCapabilities() != null && response.getPremiumStatus() != null) {
+            return response;
+        }
         ViewerContext context = capabilityService.compute(user, Instant.now(clock));
         if (response instanceof AdminProfileResponseDTO admin) {
             admin.setCapabilities(context.capabilities());

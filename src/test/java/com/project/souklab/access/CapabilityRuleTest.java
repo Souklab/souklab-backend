@@ -55,15 +55,15 @@ class CapabilityRuleTest {
         FormationCapabilityRule rule = new FormationCapabilityRule();
         Set<Capability> actual = EnumSet.noneOf(Capability.class);
         rule.apply(context(user(AccountRole.ARTISAN, Permission.Artisan.FORMATIONS), AccountRole.ARTISAN, false, false), actual);
-        assertThat(actual).containsExactlyInAnyOrder(Capability.VIEW_FORMATIONS, Capability.ENROLL_FORMATIONS);
+        assertThat(actual).containsExactlyInAnyOrder(Capability.VIEW_FORMATIONS, Capability.ENROLL_FORMATIONS,
+                Capability.REQUEST_FORMATEUR);
         actual.clear();
         rule.apply(context(user(AccountRole.ARTISAN, Permission.Artisan.FORMATIONS), AccountRole.ARTISAN, false, true), actual);
         assertThat(actual).containsExactlyInAnyOrder(Capability.VIEW_FORMATIONS, Capability.ENROLL_FORMATIONS,
                 Capability.PUBLISH_FORMATIONS);
         actual.clear();
         rule.apply(context(user(AccountRole.ADMIN, Permission.Admin.FORMATIONS), AccountRole.ADMIN, false, false), actual);
-        assertThat(actual).containsExactlyInAnyOrder(Capability.VIEW_FORMATIONS, Capability.MANAGE_FORMATIONS,
-                Capability.MANAGE_FORMATEURS);
+        assertThat(actual).containsExactlyInAnyOrder(Capability.VIEW_FORMATIONS, Capability.ADMIN_FORMATIONS);
     }
 
     @Test
@@ -71,7 +71,7 @@ class CapabilityRuleTest {
         AdminCapabilityRule rule = new AdminCapabilityRule();
         Set<Capability> actual = EnumSet.noneOf(Capability.class);
         rule.apply(context(user(AccountRole.ADMIN, Permission.Admin.USERS), AccountRole.ADMIN, false, false), actual);
-        assertThat(actual).containsExactly(Capability.MANAGE_USERS);
+        assertThat(actual).containsExactly(Capability.ADMIN_USERS);
         actual.clear();
         rule.apply(context(user(AccountRole.CLIENT, Permission.Admin.USERS), AccountRole.CLIENT, false, false), actual);
         assertThat(actual).isEmpty();

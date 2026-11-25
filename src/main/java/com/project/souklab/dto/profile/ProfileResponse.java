@@ -10,6 +10,7 @@ import java.util.Set;
 import com.project.souklab.access.Capability;
 import com.project.souklab.access.PremiumStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Common response contract for user profiles (Client and Artisan).
@@ -39,6 +40,7 @@ public interface ProfileResponse {
 
     Set<Capability> getCapabilities();
 
+    @JsonProperty("premium")
     PremiumStatus getPremiumStatus();
 
     Set<Permission> getPermissions();

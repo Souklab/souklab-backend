@@ -15,8 +15,7 @@ public class FormationCapabilityRule implements CapabilityRule {
     public void apply(CapabilityRuleContext context, Set<Capability> capabilities) {
         if (context.role() == AccountRole.ADMIN && hasPermission(context, Permission.Admin.FORMATIONS)) {
             capabilities.add(Capability.VIEW_FORMATIONS);
-            capabilities.add(Capability.MANAGE_FORMATIONS);
-            capabilities.add(Capability.MANAGE_FORMATEURS);
+            capabilities.add(Capability.ADMIN_FORMATIONS);
         }
         if (context.role() == AccountRole.ARTISAN && hasPermission(context, Permission.Artisan.FORMATIONS)) {
             capabilities.add(Capability.VIEW_FORMATIONS);
@@ -24,6 +23,10 @@ public class FormationCapabilityRule implements CapabilityRule {
             if (context.formateur()) {
                 capabilities.add(Capability.PUBLISH_FORMATIONS);
             }
+        }
+        if (context.role() == AccountRole.ARTISAN && !context.formateur()
+                && hasPermission(context, Permission.Artisan.FORMATIONS)) {
+            capabilities.add(Capability.REQUEST_FORMATEUR);
         }
     }
 

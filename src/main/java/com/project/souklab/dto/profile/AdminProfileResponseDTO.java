@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import java.util.Set;
 import com.project.souklab.access.Capability;
 import com.project.souklab.access.PremiumStatus;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /** Minimal current-user profile for administrators, who do not have a client profile. */
 @Data
@@ -29,6 +30,7 @@ public class AdminProfileResponseDTO implements ProfileResponse {
     private AccountStatus accountStatus;
     private AccountRole accountRole;
     private Set<Capability> capabilities;
+    @JsonProperty("premium")
     private PremiumStatus premiumStatus;
     private Set<Permission> permissions;
     private boolean emailVerified;

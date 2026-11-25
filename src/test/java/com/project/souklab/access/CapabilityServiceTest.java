@@ -4,6 +4,7 @@ import com.project.souklab.dao.ArtisanSubscriptionRepository;
 import com.project.souklab.dao.ClientSubscriptionRepository;
 import com.project.souklab.model.*;
 import com.project.souklab.access.rules.AdminCapabilityRule;
+import com.project.souklab.access.rules.AccountCapabilityRule;
 import com.project.souklab.access.rules.FormationCapabilityRule;
 import com.project.souklab.access.rules.IdentityCapabilityRule;
 import com.project.souklab.access.rules.MessagingCapabilityRule;
@@ -37,7 +38,7 @@ class CapabilityServiceTest {
     void setUp() {
         service = new CapabilityService(clients, artisans, List.of(
                 new MessagingCapabilityRule(), new IdentityCapabilityRule(),
-                new FormationCapabilityRule(), new AdminCapabilityRule()));
+                new FormationCapabilityRule(), new AdminCapabilityRule(), new AccountCapabilityRule()));
     }
 
 
@@ -47,6 +48,8 @@ class CapabilityServiceTest {
         assertThat(result.role()).isNull();
         assertThat(result.premiumStatus().active()).isFalse();
         assertThat(result.capabilities()).isEmpty();
+        assertThat(result.can(Capability.START_CONVERSATION)).isFalse();
+        assertThat(result.can(Capability.VIEW_ARTISAN_IDENTITY)).isFalse();
     }
 
     @Test
@@ -61,19 +64,20 @@ class CapabilityServiceTest {
         assertThat(result.can(Capability.START_CONVERSATION)).isTrue();
         assertThat(result.can(Capability.VIEW_ARTISAN_IDENTITY)).isTrue();
         assertThat(result.can(Capability.VIEW_FORMATIONS)).isTrue();
-        assertThat(result.can(Capability.MANAGE_USERS)).isTrue();
+        assertThat(result.can(Capability.ADMIN_USERS)).isTrue();
 
         admin.setPermissions(Set.of(permission(Permission.Message.SEND)));
         result = service.compute(admin, NOW);
-        assertThat(result.can(Capability.MANAGE_USERS)).isFalse();
+        assertThat(result.can(Capability.ADMIN_USERS)).isFalse();
         assertThat(result.can(Capability.VIEW_ARTISAN_IDENTITY)).isFalse();
-        assertThat(result.can(Capability.MANAGE_FORMATIONS)).isFalse();
+        assertThat(result.can(Capability.ADMIN_FORMATIONS)).isFalse();
     }
 
     @Test
     void freeClientCannotMessageOrViewIdentity() {
         ViewerContext result = service.compute(user(AccountRole.CLIENT, false), NOW);
-        assertThat(result.capabilities()).isEmpty();
+        assertThat(result.capabilities()).contains(Capability.HAS_MEMBER_PROFILE, Capability.DELETE_ACCOUNT,
+                Capability.MANAGE_SUBSCRIPTION);
         assertThat(result.premiumStatus().active()).isFalse();
     }
 
@@ -124,9 +128,9 @@ class CapabilityServiceTest {
         assertThat(service.compute(artisan, NOW).can(Capability.VIEW_ARTISAN_IDENTITY)).isTrue();
 
         User admin = user(AccountRole.ADMIN, true);
-        assertThat(service.compute(admin, NOW).can(Capability.MANAGE_FORMATIONS)).isFalse();
+        assertThat(service.compute(admin, NOW).can(Capability.ADMIN_FORMATIONS)).isFalse();
         admin.setPermissions(new HashSet<>(Set.of(permission(Permission.Admin.FORMATIONS))));
-        assertThat(service.compute(admin, NOW).can(Capability.MANAGE_FORMATIONS)).isTrue();
+        assertThat(service.compute(admin, NOW).can(Capability.ADMIN_FORMATIONS)).isTrue();
     }
 
     @Test

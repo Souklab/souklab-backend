@@ -75,7 +75,7 @@ public class ArtisanProfileService {
         User viewer = userRepository.findByEmail(email.toLowerCase(Locale.ROOT))
                 .orElseThrow(() -> new ResourceNotFoundException(ERROR_USER_NOT_FOUND_PREFIX + email));
 
-        boolean isAdmin = capabilityService.compute(viewer, Instant.now(clock)).can(Capability.MANAGE_USERS);
+        boolean isAdmin = capabilityService.compute(viewer, Instant.now(clock)).can(Capability.ADMIN_USERS);
 
         verifyViewerAccess(viewer, isAdmin);
 
