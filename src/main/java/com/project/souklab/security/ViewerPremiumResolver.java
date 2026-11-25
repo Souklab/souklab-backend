@@ -1,6 +1,8 @@
 package com.project.souklab.security;
 
 import com.project.souklab.dao.UserRepository;
+import com.project.souklab.access.Capability;
+import com.project.souklab.access.CapabilityService;
 import com.project.souklab.model.User;
 import com.project.souklab.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +11,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Locale;
+import java.time.Clock;
+import java.time.Instant;
 
 /**
  * Shared component that determines whether contact information should be locked
@@ -29,13 +33,15 @@ import java.util.Locale;
 public class ViewerPremiumResolver {
 
     private final UserRepository userRepository;
+    private final CapabilityService capabilityService;
+    private final Clock clock;
 
     /**
      * Resolves contact-info lock state for the viewer inferred from the current
      * {@link SecurityContext}.
      *
-     * <p>Intended for the directory search path, where the viewer entity is not
-     * pre-loaded and there is no self-view concept.
+     * <p>Intended for directory searches before individual result rows are mapped.
+     * A row owned by the viewer is exempted separately during mapping.
      *
      * @return {@code true} if contact fields must be masked; {@code false} if the
      *         viewer has premium access
@@ -53,10 +59,16 @@ public class ViewerPremiumResolver {
             return true;
         }
 
-        boolean isAdmin = viewer.getPermissions().stream()
-                .anyMatch(p -> Permission.Admin.USERS.matches(p.getPermissionKey()));
+        return isContactInfoLocked(viewer, false, false);
+    }
 
-        return isContactInfoLocked(viewer, false, isAdmin);
+    /** Returns whether the current authenticated account owns the supplied profile. */
+    public boolean isSelf(User subject) {
+        if (subject == null || subject.getEmail() == null) {
+            return false;
+        }
+        String email = SecurityUtils.getCurrentUsername();
+        return email != null && email.equalsIgnoreCase(subject.getEmail());
     }
 
     /**
@@ -83,10 +95,8 @@ public class ViewerPremiumResolver {
             return true;
         }
 
-        boolean isAdmin = viewer.getPermissions().stream()
-                .anyMatch(p -> Permission.Admin.USERS.matches(p.getPermissionKey()));
         boolean isSelf = viewer.getId() != null && viewer.getId().equals(subject.getId());
-        return isContactInfoLocked(viewer, isSelf, isAdmin);
+        return isContactInfoLocked(viewer, isSelf, false);
     }
 
     /**
@@ -105,13 +115,7 @@ public class ViewerPremiumResolver {
         if (isSelf || isAdmin) {
             return false;
         }
-        if (viewer.getClient() != null) {
-            return !viewer.getClient().isPremium();
-        }
-        if (viewer.getArtisan() != null) {
-            return !viewer.getArtisan().isPremium();
-        }
-        return true;
+        return !capabilityService.compute(viewer, Instant.now(clock)).can(Capability.VIEW_ARTISAN_IDENTITY);
     }
 
     /**

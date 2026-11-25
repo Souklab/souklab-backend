@@ -48,6 +48,10 @@ public class FormationAuthorDTO {
      * @return populated FormationAuthorDTO
      */
     public static FormationAuthorDTO from(Artisan artisan) {
+        return from(artisan, false);
+    }
+
+    public static FormationAuthorDTO from(Artisan artisan, boolean formateur) {
         if (artisan == null) {
             return null;
         }
@@ -68,7 +72,7 @@ public class FormationAuthorDTO {
                 .name(fullName)
                 .avatarUrl(avatar)
                 .city(artisan.getCity())
-                .teacher(artisan.isTeacher())
+                .teacher(formateur)
                 .build();
     }
 }

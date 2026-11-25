@@ -1,4 +1,6 @@
 package com.project.souklab.service.feed;
+
+import com.project.souklab.model.AccountRole;
 import java.io.ByteArrayInputStream;
 
 import com.project.souklab.dto.feed.FeedPostModerationDTO;
@@ -99,6 +101,7 @@ class FeedPostServiceTest {
     void setUp() {
         user = User.builder().email("artisan@example.com").status(AccountStatus.ACTIVE).build();
         user.setId("user-1");
+        user.setAccountRole(AccountRole.ARTISAN);
         Artisan artisan = Artisan.builder().id("artisan-1").user(user).isVerified(true).build();
         user.setArtisan(artisan);
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(

@@ -12,9 +12,11 @@ import jakarta.persistence.LockModeType;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Collection;
 
 public interface ClientSubscriptionRepository extends JpaRepository<ClientSubscription, String> {
     Optional<ClientSubscription> findFirstByAccountIdAndStatusInOrderByCreatedAtDesc(String accountId, List<SubscriptionStatus> statuses);
+    List<ClientSubscription> findByAccountIdInAndStatusInOrderByCreatedAtDesc(Collection<String> accountIds, List<SubscriptionStatus> statuses);
     List<ClientSubscription> findByAccountIdOrderByCreatedAtDesc(String accountId);
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from ClientSubscription s where s.id = :id")

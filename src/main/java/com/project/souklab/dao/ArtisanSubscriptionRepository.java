@@ -12,9 +12,11 @@ import jakarta.persistence.LockModeType;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Collection;
 
 public interface ArtisanSubscriptionRepository extends JpaRepository<ArtisanSubscription, String> {
     Optional<ArtisanSubscription> findFirstByAccountIdAndStatusInOrderByCreatedAtDesc(String accountId, List<SubscriptionStatus> statuses);
+    List<ArtisanSubscription> findByAccountIdInAndStatusInOrderByCreatedAtDesc(Collection<String> accountIds, List<SubscriptionStatus> statuses);
     List<ArtisanSubscription> findByAccountIdOrderByCreatedAtDesc(String accountId);
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from ArtisanSubscription s where s.id = :id")

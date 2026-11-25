@@ -1,4 +1,8 @@
 package com.project.souklab.service.formateur;
+import com.project.souklab.access.CapabilityService;
+import com.project.souklab.access.PremiumStatus;
+import com.project.souklab.access.ViewerContext;
+import com.project.souklab.model.AccountRole;
 import com.project.souklab.security.Permission;
 import com.project.souklab.config.ArtisanProperties;
 import com.project.souklab.dao.ArtisanFormateurRequestRepository;
@@ -32,11 +36,13 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 /**
@@ -73,6 +79,9 @@ class ArtisanFormateurServiceCooldownTest {
     private EmailUtil emailUtil;
 
     @Mock
+    private CapabilityService capabilityService;
+
+    @Mock
     private SecurityContext securityContext;
 
     @Mock
@@ -102,6 +111,13 @@ class ArtisanFormateurServiceCooldownTest {
                 .user(artisanUser)
                 .isTeacher(false)
                 .build();
+        artisanUser.setArtisan(artisanProfile);
+        lenient().when(capabilityService.compute(any(User.class), any(Instant.class)))
+                .thenAnswer(invocation -> {
+                    User subject = invocation.getArgument(0);
+                    boolean formateur = subject.getArtisan() != null && subject.getArtisan().isTeacher();
+                    return new ViewerContext(subject.getId(), AccountRole.ARTISAN, PremiumStatus.none(), Set.of(), formateur);
+                });
 
         adminUser = User.builder()
                 .email("admin@example.com")
@@ -133,7 +149,8 @@ class ArtisanFormateurServiceCooldownTest {
                 notificationService,
                 emailUtil,
                 configuredProperties(),
-                fixedClock
+                fixedClock,
+                capabilityService
         );
 
         when(authentication.getName()).thenReturn("admin@example.com");
@@ -176,7 +193,8 @@ class ArtisanFormateurServiceCooldownTest {
                 notificationService,
                 emailUtil,
                 configuredProperties(),
-                fixedClockDuringCooldown
+                fixedClockDuringCooldown,
+                capabilityService
         );
 
         when(userRepository.findByEmail("artisan@example.com")).thenReturn(Optional.of(artisanUser));
@@ -215,7 +233,8 @@ class ArtisanFormateurServiceCooldownTest {
                 notificationService,
                 emailUtil,
                 configuredProperties(),
-                fixedClockAfterCooldown
+                fixedClockAfterCooldown,
+                capabilityService
         );
 
         when(userRepository.findByEmail("artisan@example.com")).thenReturn(Optional.of(artisanUser));

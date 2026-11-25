@@ -37,11 +37,15 @@ import com.project.souklab.config.SubscriptionProperties;
 import com.project.souklab.config.SupportProperties;
 import com.project.souklab.filestorage.config.StorageProperties;
 import com.project.souklab.security.AccessControlService;
+import com.project.souklab.security.Permission;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
+import org.mockito.Mockito;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.Authentication;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -93,8 +97,55 @@ import org.springframework.security.web.SecurityFilterChain;
         SubscriptionProperties.class,
         SupportProperties.class
 })
-@Import(AccessControlService.class)
 public class ControllerSliceSecurityConfig {
+
+
+    /**
+     * Controller slices exercise HTTP permission wiring without loading the persistence layer.
+     * The production access-control component is tested separately with persisted accounts.
+     */
+    @Bean("accessControl")
+    public AccessControlService accessControlService() {
+        AccessControlService service = Mockito.mock(AccessControlService.class);
+        when(service.hasPermission(any(), any())).thenAnswer(invocation -> hasPermission(
+                invocation.getArgument(0), invocation.getArgument(1)));
+        when(service.isAdmin(any())).thenAnswer(invocation -> hasPermission(
+                invocation.getArgument(0), Permission.Admin.USERS));
+        when(service.canManageUsers(any())).thenAnswer(invocation -> hasPermission(
+                invocation.getArgument(0), Permission.Admin.USERS));
+        when(service.canManageFormations(any())).thenAnswer(invocation -> hasPermission(
+                invocation.getArgument(0), Permission.Admin.FORMATIONS));
+        when(service.canModerateFeed(any())).thenAnswer(invocation -> hasPermission(
+                invocation.getArgument(0), Permission.Admin.FEED));
+        when(service.canModerateReports(any())).thenAnswer(invocation -> hasPermission(
+                invocation.getArgument(0), Permission.Admin.REPORTS));
+        when(service.canManageFinancialOperations(any())).thenAnswer(invocation -> hasPermission(
+                invocation.getArgument(0), Permission.Financial.ADMIN));
+        when(service.canViewAnalytics(any())).thenAnswer(invocation -> hasPermission(
+                invocation.getArgument(0), Permission.Analytics.ADMIN));
+        when(service.canManageArtisanFormations(any())).thenAnswer(invocation -> hasPermission(
+                invocation.getArgument(0), Permission.Artisan.FORMATIONS));
+        when(service.canManageArtisanContent(any())).thenAnswer(invocation -> hasPermission(
+                invocation.getArgument(0), Permission.Artisan.CONTENT));
+        when(service.canManageArtisanReviews(any())).thenAnswer(invocation -> hasPermission(
+                invocation.getArgument(0), Permission.Artisan.REVIEWS));
+        when(service.isArtisan(any())).thenAnswer(invocation -> hasPermission(
+                invocation.getArgument(0), Permission.Artisan.CONTENT));
+        when(service.canReadProfile(any())).thenAnswer(invocation -> hasPermission(
+                invocation.getArgument(0), Permission.Profile.READ));
+        when(service.canWriteProfile(any())).thenAnswer(invocation -> hasPermission(
+                invocation.getArgument(0), Permission.Profile.WRITE));
+        when(service.canManageCatalog(any())).thenAnswer(invocation -> hasPermission(
+                invocation.getArgument(0), Permission.Admin.CATALOG));
+        when(service.canManageFavorites(any())).thenAnswer(invocation -> hasPermission(
+                invocation.getArgument(0), Permission.Client.FAVORITES));
+        return service;
+    }
+
+    private static boolean hasPermission(Authentication authentication, Permission permission) {
+        return authentication != null && authentication.isAuthenticated()
+                && authentication.getAuthorities().stream().anyMatch(permission::matches);
+    }
 
     /**
      * Configures the test security filter chain.

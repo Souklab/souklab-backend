@@ -13,6 +13,7 @@ import com.project.souklab.dto.subscription.SubscriptionResponse;
 import com.project.souklab.exception.BadRequestException;
 import com.project.souklab.model.Artisan;
 import com.project.souklab.model.ArtisanSubscription;
+import com.project.souklab.model.AccountRole;
 import com.project.souklab.model.BillingPeriod;
 import com.project.souklab.model.Client;
 import com.project.souklab.model.ClientSubscription;
@@ -258,6 +259,7 @@ class AdminSubscriptionServiceTest {
     void revokeArtisanSubscriptionSuccess() {
         User account = new User();
         account.setId("artisan-user-1");
+        account.setAccountRole(AccountRole.ARTISAN);
         Artisan artisan = new Artisan();
         artisan.setPremium(true);
         account.setArtisan(artisan);
@@ -287,6 +289,7 @@ class AdminSubscriptionServiceTest {
     void cancelArtisanSubscriptionSuccess() {
         User account = new User();
         account.setId("artisan-user-1");
+        account.setAccountRole(AccountRole.ARTISAN);
         Artisan artisan = new Artisan();
         artisan.setPremium(true);
         account.setArtisan(artisan);

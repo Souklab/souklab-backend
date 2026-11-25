@@ -133,6 +133,17 @@ public class FormationResponseDTO {
             long activeEnrollmentsCount,
             String fileServingPrefix
     ) {
+        return from(formation, activeFiles, reviews, activeEnrollmentsCount, fileServingPrefix, false);
+    }
+
+    public static FormationResponseDTO from(
+            Formation formation,
+            List<FormationFile> activeFiles,
+            List<FormationReview> reviews,
+            long activeEnrollmentsCount,
+            String fileServingPrefix,
+            boolean authorIsFormateur
+    ) {
         if (formation == null) {
             return null;
         }
@@ -145,7 +156,7 @@ public class FormationResponseDTO {
 
         return FormationResponseDTO.builder()
                 .id(formation.getId())
-                .author(FormationAuthorDTO.from(formation.getAuthor()))
+                .author(FormationAuthorDTO.from(formation.getAuthor(), authorIsFormateur))
                 .title(formation.getTitle())
                 .description(formation.getDescription())
                 .thumbnailUrl(formation.getThumbnailUrl())

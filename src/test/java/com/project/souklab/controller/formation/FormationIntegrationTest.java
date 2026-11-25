@@ -5,6 +5,7 @@ import com.project.souklab.dao.ArtisanRepository;
 import com.project.souklab.dao.ClientRepository;
 import com.project.souklab.dao.UserRepository;
 import com.project.souklab.model.AccountStatus;
+import com.project.souklab.model.AccountRole;
 import com.project.souklab.model.Artisan;
 import com.project.souklab.model.Client;
 import com.project.souklab.model.ClientType;
@@ -93,6 +94,7 @@ class FormationIntegrationTest {
     void setUpEntities() {
         teacherUser = User.builder()
                 .email(MASTER_TEACHER_EMAIL)
+                .accountRole(AccountRole.ARTISAN)
                 .firstName("Rabah")
                 .lastName("Maitre")
                 .status(AccountStatus.ACTIVE)
@@ -111,6 +113,7 @@ class FormationIntegrationTest {
 
         peerUser1 = User.builder()
                 .email(PEER_ARTISAN_1_EMAIL)
+                .accountRole(AccountRole.ARTISAN)
                 .firstName("Lyes")
                 .lastName("Artisan")
                 .status(AccountStatus.ACTIVE)
@@ -128,6 +131,7 @@ class FormationIntegrationTest {
 
         peerUser2 = User.builder()
                 .email(PEER_ARTISAN_2_EMAIL)
+                .accountRole(AccountRole.ARTISAN)
                 .firstName("Kamel")
                 .lastName("Artisan")
                 .status(AccountStatus.ACTIVE)
@@ -145,6 +149,7 @@ class FormationIntegrationTest {
 
         adminUser = User.builder()
                 .email(ADMIN_EMAIL)
+                .accountRole(AccountRole.ADMIN)
                 .firstName("Admin")
                 .lastName("Moderator")
                 .status(AccountStatus.ACTIVE)

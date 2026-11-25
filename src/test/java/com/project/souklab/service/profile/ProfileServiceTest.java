@@ -8,6 +8,7 @@ import com.project.souklab.dao.MaterialRepository;
 import com.project.souklab.dao.RegionRepository;
 import com.project.souklab.dao.TechniqueRepository;
 import com.project.souklab.dao.UserRepository;
+import com.project.souklab.access.MeCapabilitiesContributor;
 import com.project.souklab.dto.auth.CompleteProfileRequestDTO;
 import com.project.souklab.dto.common.PatchField;
 import com.project.souklab.dto.profile.ArtisanResponseDTO;
@@ -18,6 +19,7 @@ import com.project.souklab.exception.ForbiddenException;
 import com.project.souklab.exception.ResourceNotFoundException;
 import com.project.souklab.exception.UnauthorizedException;
 import com.project.souklab.model.AccountStatus;
+import com.project.souklab.model.AccountRole;
 import com.project.souklab.model.Artisan;
 import com.project.souklab.model.Client;
 import com.project.souklab.model.ClientType;
@@ -51,6 +53,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 
 /**
  * Unit test suite for {@link ProfileService} covering profile lifecycle management,
@@ -83,7 +87,9 @@ class ProfileServiceTest {
     @Mock
     private EpoqueRepository epoqueRepository;
 
-    private final ProfileResponseMapper profileResponseMapper = new ProfileResponseMapper();
+    private final ProfileResponseMapper profileResponseMapper = ProfileResponseMapperTestFactory.create();
+    @Mock
+    private MeCapabilitiesContributor meCapabilitiesContributor;
 
     private ProfileService profileService;
     private AuthorizationPermission artisanRole;
@@ -111,7 +117,8 @@ class ProfileServiceTest {
                 materialRepository,
                 techniqueRepository,
                 epoqueRepository,
-                profileResponseMapper
+                profileResponseMapper,
+                meCapabilitiesContributor
         );
     }
 
@@ -176,6 +183,7 @@ class ProfileServiceTest {
 
         User user = User.builder()
                 .email("artisan@example.com")
+                .accountRole(AccountRole.ARTISAN)
                 .firstName("Karim")
                 .lastName("Najar")
                 .status(AccountStatus.ACTIVE)
@@ -184,6 +192,8 @@ class ProfileServiceTest {
                 .build();
 
         when(userRepository.findByEmail("artisan@example.com")).thenReturn(Optional.of(user));
+        when(meCapabilitiesContributor.contribute(eq(user), any()))
+                .thenAnswer(invocation -> invocation.getArgument(1));
 
         ProfileResponse response = profileService.getCurrentUser();
 
@@ -217,6 +227,7 @@ class ProfileServiceTest {
 
         User user = User.builder()
                 .email("client@example.com")
+                .accountRole(AccountRole.CLIENT)
                 .firstName("Sara")
                 .lastName("Mansour")
                 .status(AccountStatus.ACTIVE)
@@ -225,6 +236,8 @@ class ProfileServiceTest {
                 .build();
 
         when(userRepository.findByEmail("client@example.com")).thenReturn(Optional.of(user));
+        when(meCapabilitiesContributor.contribute(eq(user), any()))
+                .thenAnswer(invocation -> invocation.getArgument(1));
 
         ProfileResponse response = profileService.getCurrentUser();
 
@@ -280,6 +293,7 @@ class ProfileServiceTest {
 
         User user = User.builder()
                 .email("artisan@example.com")
+                .accountRole(AccountRole.ARTISAN)
                 .permissions(new HashSet<>(Set.of(artisanRole)))
                 .build();
         user.setId("artisan-id-1");
@@ -334,6 +348,7 @@ class ProfileServiceTest {
 
         User user = User.builder()
                 .email("artisan@example.com")
+                .accountRole(AccountRole.ARTISAN)
                 .permissions(new HashSet<>(Set.of(artisanRole)))
                 .build();
         user.setId("artisan-id-2");
@@ -373,6 +388,7 @@ class ProfileServiceTest {
 
         User user = User.builder()
                 .email("artisan@example.com")
+                .accountRole(AccountRole.ARTISAN)
                 .permissions(new HashSet<>(Set.of(artisanRole)))
                 .build();
         user.setId("artisan-id-bad-region");
@@ -405,6 +421,7 @@ class ProfileServiceTest {
 
         User user = User.builder()
                 .email("artisan@example.com")
+                .accountRole(AccountRole.ARTISAN)
                 .permissions(new HashSet<>(Set.of(artisanRole)))
                 .build();
         user.setId("artisan-id-bad-subcat");
@@ -437,6 +454,7 @@ class ProfileServiceTest {
 
         User user = User.builder()
                 .email("artisan@example.com")
+                .accountRole(AccountRole.ARTISAN)
                 .permissions(new HashSet<>(Set.of(artisanRole)))
                 .build();
         user.setId("artisan-id-taxonomy");
@@ -492,6 +510,7 @@ class ProfileServiceTest {
 
         User user = User.builder()
                 .email("artisan@example.com")
+                .accountRole(AccountRole.ARTISAN)
                 .permissions(new HashSet<>(Set.of(artisanRole)))
                 .build();
         user.setId("artisan-id-mat-404");
@@ -610,6 +629,7 @@ class ProfileServiceTest {
 
         User user = User.builder()
                 .email("admin@example.com")
+                .accountRole(AccountRole.ADMIN)
                 .permissions(new HashSet<>(Set.of(adminRole)))
                 .build();
         user.setId("admin-id");
@@ -636,6 +656,7 @@ class ProfileServiceTest {
 
         User user = User.builder()
                 .email("artisan@example.com")
+                .accountRole(AccountRole.ARTISAN)
                 .permissions(new HashSet<>(Set.of(artisanRole)))
                 .build();
         user.setId("artisan-preserve-id");
@@ -741,6 +762,7 @@ class ProfileServiceTest {
 
         User user = User.builder()
                 .email("admin@example.com")
+                .accountRole(AccountRole.ADMIN)
                 .permissions(new HashSet<>(Set.of(adminRole)))
                 .build();
 
@@ -836,6 +858,7 @@ class ProfileServiceTest {
 
         User user = User.builder()
                 .email("artisan@example.com")
+                .accountRole(AccountRole.ARTISAN)
                 .permissions(new HashSet<>(Set.of(artisanRole)))
                 .build();
         user.setId("artisan-id-undef");
@@ -874,6 +897,7 @@ class ProfileServiceTest {
 
         User user = User.builder()
                 .email("artisan@example.com")
+                .accountRole(AccountRole.ARTISAN)
                 .permissions(new HashSet<>(Set.of(artisanRole)))
                 .build();
         user.setId("artisan-id-empty-tax");
@@ -914,6 +938,7 @@ class ProfileServiceTest {
 
         User user = User.builder()
                 .email("artisan@example.com")
+                .accountRole(AccountRole.ARTISAN)
                 .permissions(new HashSet<>(Set.of(artisanRole)))
                 .build();
         user.setId("artisan-id-patch");
@@ -964,6 +989,7 @@ class ProfileServiceTest {
 
         User user = User.builder()
                 .email("artisan@example.com")
+                .accountRole(AccountRole.ARTISAN)
                 .permissions(new HashSet<>(Set.of(artisanRole)))
                 .build();
         user.setId("artisan-id-patch-null");
@@ -1014,6 +1040,7 @@ class ProfileServiceTest {
 
         User user = User.builder()
                 .email("artisan@example.com")
+                .accountRole(AccountRole.ARTISAN)
                 .permissions(new HashSet<>(Set.of(artisanRole)))
                 .build();
         user.setId("artisan-id-region-fallback");
@@ -1049,6 +1076,7 @@ class ProfileServiceTest {
 
         User user = User.builder()
                 .email("artisan@example.com")
+                .accountRole(AccountRole.ARTISAN)
                 .permissions(new HashSet<>(Set.of(artisanRole)))
                 .build();
         user.setId("artisan-id-region-null");
@@ -1080,6 +1108,7 @@ class ProfileServiceTest {
 
         User user = User.builder()
                 .email("artisan@example.com")
+                .accountRole(AccountRole.ARTISAN)
                 .permissions(new HashSet<>(Set.of(artisanRole)))
                 .build();
         user.setId("artisan-id-patch-tax");
@@ -1127,6 +1156,7 @@ class ProfileServiceTest {
 
         User user = User.builder()
                 .email("artisan@example.com")
+                .accountRole(AccountRole.ARTISAN)
                 .permissions(new HashSet<>(Set.of(artisanRole)))
                 .build();
         user.setId("artisan-id-patch-mat404");
@@ -1153,6 +1183,7 @@ class ProfileServiceTest {
                 new UsernamePasswordAuthenticationToken("artisan@example.com", "cred",
                         List.of(Permission.Artisan.CONTENT)));
         User user = User.builder().email("artisan@example.com")
+                .accountRole(AccountRole.ARTISAN)
                 .permissions(new HashSet<>(Set.of(artisanRole))).build();
         user.setId("artisan-id-patch-taxonomy-404");
         Artisan artisan = Artisan.builder().user(user).build();
@@ -1416,6 +1447,7 @@ class ProfileServiceTest {
 
         User user = User.builder()
                 .email("artisan@example.com")
+                .accountRole(AccountRole.ARTISAN)
                 .permissions(new HashSet<>(Set.of(artisanRole)))
                 .build();
         user.setId("artisan-no-reg-patch");
@@ -1483,6 +1515,7 @@ class ProfileServiceTest {
                 new UsernamePasswordAuthenticationToken("artisan@example.com", "cred",
                         List.of(Permission.Artisan.CONTENT)));
         User user = User.builder().email("artisan@example.com")
+                .accountRole(AccountRole.ARTISAN)
                 .permissions(new HashSet<>(Set.of(artisanRole))).build();
         user.setId("artisan-edge");
         Artisan artisan = Artisan.builder().user(user).build();

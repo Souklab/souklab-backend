@@ -127,11 +127,11 @@ class FileAccessServiceTest {
         when(certificationRepository.findByDocumentUrlAndDeletedAtIsNull("/files/certificate"))
                 .thenReturn(Optional.of(certification));
         when(accessControlService.hasPermission(any(), eq(Permission.File.READ))).thenReturn(true);
-        when(accessControlService.hasPermission(any(), eq(Permission.Admin.USERS))).thenReturn(false);
+        when(accessControlService.canManageUsers(any())).thenReturn(false);
 
         assertThat(fileAccessService().authorize("certificate")).isFalse();
 
-        when(accessControlService.hasPermission(any(), eq(Permission.Admin.USERS))).thenReturn(true);
+        when(accessControlService.canManageUsers(any())).thenReturn(true);
         assertThat(fileAccessService().authorize("certificate")).isFalse();
     }
 
@@ -151,7 +151,7 @@ class FileAccessServiceTest {
         when(certificationRepository.findByDocumentUrlAndDeletedAtIsNull("/files/verified-cert"))
                 .thenReturn(Optional.of(certification));
         when(accessControlService.hasPermission(any(), eq(Permission.File.READ))).thenReturn(true);
-        when(accessControlService.hasPermission(any(), eq(Permission.Admin.USERS))).thenReturn(false);
+        when(accessControlService.canManageUsers(any())).thenReturn(false);
 
         assertThat(fileAccessService().authorize("verified-cert")).isFalse();
     }
@@ -169,7 +169,7 @@ class FileAccessServiceTest {
         when(certificationRepository.findByDocumentUrlAndDeletedAtIsNull("/files/certificate"))
                 .thenReturn(Optional.of(certification));
         when(accessControlService.hasPermission(any(), eq(Permission.File.READ))).thenReturn(true);
-        when(accessControlService.hasPermission(any(), eq(Permission.Admin.USERS))).thenReturn(false);
+        when(accessControlService.canManageUsers(any())).thenReturn(false);
         assertThatThrownBy(() -> fileAccessService().authorize("certificate"))
                 .isInstanceOf(ForbiddenException.class);
 

@@ -1,4 +1,7 @@
 package com.project.souklab.service.formation;
+import com.project.souklab.access.CapabilityService;
+import com.project.souklab.access.PremiumStatus;
+import com.project.souklab.access.ViewerContext;
 import com.project.souklab.exception.ResourceNotFoundException;
 import com.project.souklab.security.Permission;
 import com.project.souklab.config.AppStorageProperties;
@@ -27,6 +30,7 @@ import com.project.souklab.filestorage.validation.FileValidator;
 import com.project.souklab.filestorage.validation.ValidatedFile;
 import com.project.souklab.filestorage.lifecycle.StorageObjectLifecycle;
 import com.project.souklab.model.Artisan;
+import com.project.souklab.model.AccountRole;
 import com.project.souklab.model.EnrollmentStatus;
 import com.project.souklab.model.Formation;
 import com.project.souklab.model.FormationEnrollment;
@@ -66,6 +70,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -128,6 +133,9 @@ import static org.mockito.Mockito.when;
     @Mock
     private NotificationService notificationService;
 
+    @Mock
+    private CapabilityService capabilityService;
+
     @Spy
     private FormationProperties formationProperties = new FormationProperties();
 
@@ -176,6 +184,13 @@ import static org.mockito.Mockito.when;
                 .isTeacher(false)
                 .build();
 
+        lenient().when(capabilityService.compute(any(User.class), any(Instant.class)))
+                .thenAnswer(invocation -> {
+                    User subject = invocation.getArgument(0);
+                    boolean formateur = subject.getArtisan() != null && subject.getArtisan().isTeacher();
+                    return new ViewerContext(subject.getId(), AccountRole.ARTISAN, PremiumStatus.none(), Set.of(), formateur);
+                });
+
         testFormation = Formation.builder()
                 .author(teacherArtisan)
                 .title("Mastering Ceramics")
@@ -201,6 +216,7 @@ import static org.mockito.Mockito.when;
      * Configures the security context with an authenticated artisan.
      */
     private void authenticateArtisan(Artisan artisan) {
+        testUser.setArtisan(artisan);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
         Authentication authentication = Mockito.mock(Authentication.class);
 

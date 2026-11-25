@@ -2,6 +2,8 @@ package com.project.souklab.dto.formation;
 
 import com.project.souklab.model.EnrollmentStatus;
 import com.project.souklab.model.FormationEnrollment;
+import com.project.souklab.model.Artisan;
+import java.util.Optional;
 import com.project.souklab.model.User;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -72,11 +74,12 @@ public class FormationEnrollmentResponseDTO {
 
         String formId = enrollment.getFormation() != null ? enrollment.getFormation().getId() : null;
         String formTitle = enrollment.getFormation() != null ? enrollment.getFormation().getTitle() : null;
-        String artId = enrollment.getArtisan() != null ? enrollment.getArtisan().getId() : null;
+        String artId = Optional.ofNullable(enrollment.getArtisan()).map(Artisan::getId).orElse(null);
         String artName = null;
 
-        if (enrollment.getArtisan() != null && enrollment.getArtisan().getUser() != null) {
-            User user = enrollment.getArtisan().getUser();
+        User artisanUser = Optional.ofNullable(enrollment.getArtisan()).map(artisan -> artisan.getUser()).orElse(null);
+        if (artisanUser != null) {
+            User user = artisanUser;
             String first = user.getFirstName() != null ? user.getFirstName() : "";
             String last = user.getLastName() != null ? user.getLastName() : "";
             artName = (first + " " + last).trim();

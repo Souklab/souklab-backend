@@ -1,9 +1,21 @@
 package com.project.souklab.config;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
+import com.project.souklab.access.Capability;
+import com.project.souklab.access.CapabilityService;
+import com.project.souklab.access.PremiumStatus;
+import com.project.souklab.access.ViewerContext;
+import com.project.souklab.dao.UserRepository;
+import com.project.souklab.model.AccountRole;
+import com.project.souklab.model.User;
 import com.project.souklab.security.JwtUtils;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -20,6 +32,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -28,6 +42,18 @@ class WebSocketAuthInterceptorTest {
     @Mock UserDetailsService userDetailsService;
     @Mock UserDetails userDetails;
     @Mock WebSocketSessionRegistry sessionRegistry;
+    @Mock UserRepository userRepository;
+    @Mock CapabilityService capabilityService;
+
+    @BeforeEach
+    void setUp() {
+        User client = User.builder().email("client@example.com").accountRole(AccountRole.CLIENT).build();
+        client.setId("client-id");
+        lenient().when(userRepository.findByEmail("client@example.com")).thenReturn(Optional.of(client));
+        lenient().when(capabilityService.compute(eq(client), any(Instant.class)))
+                .thenReturn(new ViewerContext(client.getId(), AccountRole.CLIENT, PremiumStatus.none(),
+                        Set.of(Capability.SEND_MESSAGE, Capability.START_CONVERSATION), false));
+    }
 
     @Test
     void preSend_returnsNonConnectMessagesUnchanged() {
@@ -170,6 +196,26 @@ class WebSocketAuthInterceptorTest {
     }
 
     @Test
+    void preSend_rejectsAccountWithoutLiveMessagingCapability() {
+        User client = User.builder().email("client@example.com").accountRole(AccountRole.CLIENT).build();
+        client.setId("client-id");
+        when(userRepository.findByEmail("client@example.com")).thenReturn(Optional.of(client));
+        when(capabilityService.compute(eq(client), any(Instant.class)))
+                .thenReturn(new ViewerContext(client.getId(), AccountRole.CLIENT, PremiumStatus.none(), Set.of(), false));
+        when(sessionRegistry.tokenFor("session-1")).thenReturn("token");
+        when(jwtUtils.validateJwtToken("token")).thenReturn(true);
+        when(jwtUtils.getUserNameFromJwtToken("token")).thenReturn("client@example.com");
+        when(userDetailsService.loadUserByUsername("client@example.com")).thenReturn(userDetails);
+        when(userDetails.isEnabled()).thenReturn(true);
+        when(userDetails.isAccountNonLocked()).thenReturn(true);
+
+        assertThatThrownBy(() -> interceptor().preSend(
+                frame(StompCommand.SEND, "/app/v1/conversations", "client@example.com"), null))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessage("Account does not have messaging access.");
+    }
+
+    @Test
     void preSend_rejectsBrokerSendsAndClosesExpiredSession() {
         assertThatThrownBy(() -> interceptor().preSend(frame(StompCommand.SEND, "/topic/events", "client@example.com"), null))
                 .isInstanceOf(AccessDeniedException.class);
@@ -182,7 +228,8 @@ class WebSocketAuthInterceptorTest {
     }
 
     private WebSocketAuthInterceptor interceptor() {
-        return new WebSocketAuthInterceptor(jwtUtils, userDetailsService, OperationalMetrics.noop(), sessionRegistry);
+        return new WebSocketAuthInterceptor(jwtUtils, userDetailsService, OperationalMetrics.noop(), sessionRegistry,
+                userRepository, capabilityService, Clock.systemUTC());
     }
 
     private Message<byte[]> frame(StompCommand command, String destination, String username) {

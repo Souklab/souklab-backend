@@ -140,6 +140,17 @@ public class FormationPublicViewDTO {
             boolean isEnrolled,
             boolean isAuthor
     ) {
+        return from(formation, activeFiles, activeEnrollmentsCount, isEnrolled, isAuthor, false);
+    }
+
+    public static FormationPublicViewDTO from(
+            Formation formation,
+            List<FormationFile> activeFiles,
+            long activeEnrollmentsCount,
+            boolean isEnrolled,
+            boolean isAuthor,
+            boolean authorIsFormateur
+    ) {
         if (formation == null) {
             return null;
         }
@@ -160,7 +171,7 @@ public class FormationPublicViewDTO {
 
         return FormationPublicViewDTO.builder()
                 .id(formation.getId())
-                .author(FormationAuthorDTO.from(formation.getAuthor()))
+                .author(FormationAuthorDTO.from(formation.getAuthor(), authorIsFormateur))
                 .title(formation.getTitle())
                 .description(formation.getDescription())
                 .thumbnailUrl(formation.getThumbnailUrl())

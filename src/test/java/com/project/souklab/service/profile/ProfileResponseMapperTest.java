@@ -5,6 +5,7 @@ import com.project.souklab.dto.profile.ArtisanResponseDTO;
 import com.project.souklab.dto.profile.ClientProfileResponseDTO;
 import com.project.souklab.dto.profile.ProfileResponse;
 import com.project.souklab.model.Artisan;
+import com.project.souklab.model.AccountRole;
 import com.project.souklab.model.ArtisanCertification;
 import com.project.souklab.model.ArtisanGalleryImage;
 import com.project.souklab.model.Client;
@@ -44,7 +45,7 @@ class ProfileResponseMapperTest {
      */
     @BeforeEach
     void setUp() {
-        mapper = new ProfileResponseMapper();
+        mapper = ProfileResponseMapperTestFactory.create();
 
         artisanContentPermission = new AuthorizationPermission();
         artisanContentPermission.setPermissionKey(Permission.Artisan.CONTENT.value());
@@ -61,6 +62,7 @@ class ProfileResponseMapperTest {
     void mapToProfileResponse_forArtisanWithNullArtisanEntity_returnsDefaults() {
         User user = User.builder()
                 .email("artisan@example.com")
+                .accountRole(AccountRole.ARTISAN)
                 .firstName("Ali")
                 .lastName("K")
                 .permissions(new HashSet<>(Set.of(artisanContentPermission)))
@@ -89,6 +91,7 @@ class ProfileResponseMapperTest {
         artisan.setCertifications(null);
         User user = User.builder()
                 .email("artisan-empty@example.com")
+                .accountRole(AccountRole.ARTISAN)
                 .permissions(new HashSet<>(Set.of(artisanContentPermission)))
                 .artisan(artisan)
                 .build();
@@ -149,6 +152,7 @@ class ProfileResponseMapperTest {
 
         User user = User.builder()
                 .email("artisan@example.com")
+                .accountRole(AccountRole.ARTISAN)
                 .permissions(new HashSet<>(Set.of(artisanContentPermission)))
                 .artisan(artisan)
                 .build();
@@ -213,6 +217,7 @@ class ProfileResponseMapperTest {
 
         User user = User.builder()
                 .email("artisan@example.com")
+                .accountRole(AccountRole.ARTISAN)
                 .permissions(new HashSet<>(Set.of(artisanContentPermission)))
                 .artisan(artisan)
                 .build();
@@ -288,6 +293,7 @@ class ProfileResponseMapperTest {
 
         User user = User.builder()
                 .email("artisan@example.com")
+                .accountRole(AccountRole.ARTISAN)
                 .firstName("Rachid")
                 .lastName("M")
                 .permissions(new HashSet<>(Set.of(artisanContentPermission)))
@@ -360,6 +366,7 @@ class ProfileResponseMapperTest {
 
         User user = User.builder()
                 .email("plainartisan@example.com")
+                .accountRole(AccountRole.ARTISAN)
                 .firstName("Hassan")
                 .lastName("B")
                 .permissions(new HashSet<>(Set.of(artisanContentPermission)))

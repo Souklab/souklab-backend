@@ -385,7 +385,9 @@ class S3StorageServiceVerificationTest {
                 "storage.provider=s3",
                 "storage.s3.endpoint=http://localhost:9000",
                 "storage.s3.region=us-east-1",
-                "storage.s3.bucket=souklab-files"
+                "storage.s3.bucket=souklab-files",
+                "storage.s3.access-key=",
+                "storage.s3.secret-key="
         ).run(context -> {
             assertThat(context).hasFailed();
             assertThat(context.getStartupFailure())
@@ -408,7 +410,8 @@ class S3StorageServiceVerificationTest {
                 "storage.s3.endpoint=http://localhost:9000",
                 "storage.s3.region=us-east-1",
                 "storage.s3.access-key=minioadmin",
-                "storage.s3.secret-key=minioadmin_secret"
+                "storage.s3.secret-key=minioadmin_secret",
+                "storage.s3.bucket="
         ).run(context -> {
             assertThat(context).hasFailed();
             assertThat(context.getStartupFailure())

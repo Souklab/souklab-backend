@@ -72,6 +72,11 @@ public class User extends BaseEntity {
     @Builder.Default
     private AccountStatus status = AccountStatus.PENDING;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "account_role", nullable = false, length = 20)
+    @Builder.Default
+    private AccountRole accountRole = AccountRole.CLIENT;
+
     @Column(name = "email_verified", nullable = false)
     @Builder.Default
     private boolean emailVerified = false;

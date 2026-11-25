@@ -10,6 +10,7 @@ import com.project.souklab.dao.AuthorizationPermissionRepository;
 import com.project.souklab.dao.TechniqueRepository;
 import com.project.souklab.dao.UserRepository;
 import com.project.souklab.model.AccountStatus;
+import com.project.souklab.model.AccountRole;
 import com.project.souklab.model.Epoque;
 import com.project.souklab.model.JobCategory;
 import com.project.souklab.model.JobSubCategory;
@@ -112,6 +113,7 @@ public class DataSeeder implements CommandLineRunner {
                 .firstName("System")
                 .lastName("Administrator")
                 .status(AccountStatus.ACTIVE)
+                .accountRole(AccountRole.ADMIN)
                 .emailVerified(true)
                 .emailVerifiedAt(LocalDateTime.now(clock))
                 .permissions(adminPermissions)

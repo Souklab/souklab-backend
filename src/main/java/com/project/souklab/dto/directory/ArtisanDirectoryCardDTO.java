@@ -69,7 +69,7 @@ public class ArtisanDirectoryCardDTO {
      * @return populated directory card DTO, or null if artisan is null
      */
     public static ArtisanDirectoryCardDTO from(Artisan artisan) {
-        return from(artisan, false);
+        return from(artisan, false, false, false);
     }
 
     /**
@@ -87,6 +87,12 @@ public class ArtisanDirectoryCardDTO {
      * @return populated directory card DTO, or null if artisan is null
      */
     public static ArtisanDirectoryCardDTO from(Artisan artisan, boolean contactInfoLocked) {
+        return from(artisan, contactInfoLocked, false, false);
+    }
+
+    /** Maps an artisan using premium and formateur values resolved by {@code CapabilityService}. */
+    public static ArtisanDirectoryCardDTO from(Artisan artisan, boolean contactInfoLocked,
+                                               boolean premium, boolean teacher) {
         if (artisan == null) {
             return null;
         }
@@ -114,8 +120,8 @@ public class ArtisanDirectoryCardDTO {
                 .reviewsCount(0)
                 .viewsCount(artisan.getViewsCount())
                 .verified(artisan.isVerified())
-                .premium(artisan.isPremium())
-                .teacher(artisan.isTeacher())
+                .premium(premium)
+                .teacher(teacher)
                 .primaryMaterials(extractPrimaryMaterials(artisan))
                 .primaryTechniques(extractPrimaryTechniques(artisan))
                 .createdAt(artisan.getCreatedAt())

@@ -1,6 +1,10 @@
 package com.project.souklab.security;
 
 import com.project.souklab.dao.UserRepository;
+import com.project.souklab.access.Capability;
+import com.project.souklab.access.CapabilityService;
+import com.project.souklab.access.PremiumStatus;
+import com.project.souklab.access.ViewerContext;
 import com.project.souklab.model.Artisan;
 import com.project.souklab.model.AuthorizationPermission;
 import com.project.souklab.model.Client;
@@ -16,6 +20,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
 import java.util.Set;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mockStatic;
@@ -32,11 +41,24 @@ class ViewerPremiumResolverTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private CapabilityService capabilityService;
+
     private ViewerPremiumResolver resolver;
 
     @BeforeEach
     void setUp() {
-        resolver = new ViewerPremiumResolver(userRepository);
+        lenient().when(capabilityService.compute(any(), any()))
+                .thenAnswer(invocation -> {
+                    User viewer = invocation.getArgument(0);
+                    boolean granted = (viewer.getClient() != null && viewer.getClient().isPremium())
+                            || (viewer.getArtisan() != null && viewer.getArtisan().isPremium())
+                            || viewer.getPermissions().stream().anyMatch(p -> Permission.Admin.USERS.matches(p.getPermissionKey()));
+                    return new ViewerContext(viewer.getId(), viewer.getAccountRole(),
+                            PremiumStatus.none(), granted ? Set.of(Capability.VIEW_ARTISAN_IDENTITY) : Set.of(), false);
+                });
+        resolver = new ViewerPremiumResolver(userRepository, capabilityService,
+                Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC));
     }
 
     // ── Overloaded method tests (pure logic, no DB) ─────────────────────────

@@ -1,5 +1,6 @@
 package com.project.souklab.service.formation;
 
+import com.project.souklab.access.CapabilityService;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -43,6 +44,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -65,6 +67,7 @@ public class AdminFormationService {
     private final NotificationService notificationService;
     private final AppStorageProperties appStorageProperties;
     private final Clock clock;
+    private final CapabilityService capabilityService;
     private ActivityEventService activityEventService;
 
     @Autowired(required = false)
@@ -226,7 +229,8 @@ public class AdminFormationService {
         List<FormationFile> activeFiles = formationFileRepository.findByFormationIdAndDeletedAtIsNull(formation.getId());
         List<FormationReview> reviews = formationReviewRepository.findByFormationIdOrderByReviewedAtDesc(formation.getId());
         long activeEnrollments = formationEnrollmentRepository.countByFormationIdAndStatus(formation.getId(), EnrollmentStatus.CONFIRMED);
-        return FormationResponseDTO.from(formation, activeFiles, reviews, activeEnrollments, appStorageProperties.resolveFileServingPrefix());
+        return FormationResponseDTO.from(formation, activeFiles, reviews, activeEnrollments,
+                appStorageProperties.resolveFileServingPrefix(), isAuthorFormateur(formation));
     }
 
     /**
@@ -237,6 +241,11 @@ public class AdminFormationService {
      */
     private FormationSummaryDTO mapToSummaryDTO(Formation formation) {
         long activeEnrollments = formationEnrollmentRepository.countByFormationIdAndStatus(formation.getId(), EnrollmentStatus.CONFIRMED);
-        return FormationSummaryDTO.from(formation, activeEnrollments);
+        return FormationSummaryDTO.from(formation, activeEnrollments, isAuthorFormateur(formation));
+    }
+
+    private boolean isAuthorFormateur(Formation formation) {
+        User author = formation == null || formation.getAuthor() == null ? null : formation.getAuthor().getUser();
+        return author != null && capabilityService.compute(author, Instant.now(clock)).formateur();
     }
 }

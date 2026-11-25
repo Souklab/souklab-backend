@@ -27,7 +27,7 @@ class Phase9MariaDbMigrationTest {
                     .migrate();
 
             try (Connection connection = database.createConnection(""); Statement statement = connection.createStatement()) {
-                assertThat(migrationVersion(statement)).isEqualTo("23");
+                assertThat(migrationVersion(statement)).isEqualTo("24");
                 assertThat(enumContains(statement, "audit_logs", "action", "PAYMENT_PAID")).isTrue();
                 assertThat(enumContains(statement, "audit_logs", "action", "PAYMENT_FAILED")).isTrue();
                 assertThat(enumContains(statement, "audit_logs", "action", "PAYMENT_CANCELED")).isTrue();

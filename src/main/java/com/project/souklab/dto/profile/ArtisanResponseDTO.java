@@ -8,6 +8,7 @@ import com.project.souklab.dto.catalog.MaterialSummaryDTO;
 import com.project.souklab.dto.catalog.RegionSummaryDTO;
 import com.project.souklab.dto.catalog.TechniqueSummaryDTO;
 import com.project.souklab.model.AccountStatus;
+import com.project.souklab.model.AccountRole;
 import com.project.souklab.security.Permission;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -18,6 +19,8 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import com.project.souklab.access.Capability;
+import com.project.souklab.access.PremiumStatus;
 
 /**
  * Profile response DTO scoped to ARTISAN users.
@@ -38,6 +41,9 @@ public class ArtisanResponseDTO implements ProfileResponse {
     private String phone;
     private String avatarUrl;
     private AccountStatus accountStatus;
+    private AccountRole accountRole;
+    private Set<Capability> capabilities;
+    private PremiumStatus premiumStatus;
     private Set<Permission> permissions;
     private boolean emailVerified;
     private LocalDateTime emailVerifiedAt;

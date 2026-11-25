@@ -1,6 +1,10 @@
 package com.project.souklab.config;
 
 import com.project.souklab.analytics.AnalyticsMetric;
+import com.project.souklab.access.Capability;
+import com.project.souklab.access.CapabilityService;
+import com.project.souklab.dao.UserRepository;
+import com.project.souklab.model.User;
 import lombok.extern.slf4j.Slf4j;
 import com.project.souklab.security.JwtUtils;
 import org.springframework.messaging.Message;
@@ -18,7 +22,10 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 
 @Component
 @Slf4j
@@ -28,23 +35,21 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
     private final UserDetailsService userDetailsService;
     private final OperationalMetrics metrics;
     private final WebSocketSessionRegistry sessionRegistry;
-
-    public WebSocketAuthInterceptor(JwtUtils jwtUtils, UserDetailsService userDetailsService) {
-        this(jwtUtils, userDetailsService, OperationalMetrics.noop(), WebSocketSessionRegistry.noop());
-    }
-
-    public WebSocketAuthInterceptor(JwtUtils jwtUtils, UserDetailsService userDetailsService,
-                                    OperationalMetrics metrics) {
-        this(jwtUtils, userDetailsService, metrics, WebSocketSessionRegistry.noop());
-    }
+    private final UserRepository userRepository;
+    private final CapabilityService capabilityService;
+    private final Clock clock;
 
     @Autowired
     public WebSocketAuthInterceptor(JwtUtils jwtUtils, UserDetailsService userDetailsService,
-                                    OperationalMetrics metrics, WebSocketSessionRegistry sessionRegistry) {
+                                    OperationalMetrics metrics, WebSocketSessionRegistry sessionRegistry,
+                                    UserRepository userRepository, CapabilityService capabilityService, Clock clock) {
         this.jwtUtils = jwtUtils;
         this.userDetailsService = userDetailsService;
         this.metrics = metrics;
         this.sessionRegistry = sessionRegistry;
+        this.userRepository = userRepository;
+        this.capabilityService = capabilityService;
+        this.clock = clock;
     }
 
     @Override
@@ -113,6 +118,12 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
                 if (!current.isEnabled() || !current.isAccountNonLocked()) {
                     sessionRegistry.close(sessionId);
                     throw new AccessDeniedException("Account is not permitted to send WebSocket messages.");
+                }
+                User account = userRepository.findByEmail(username.toLowerCase(Locale.ROOT)).orElse(null);
+                if (account == null || !capabilityService.compute(account, Instant.now(clock))
+                        .can(Capability.SEND_MESSAGE)) {
+                    metrics.recordWebSocket(AnalyticsMetric.Operational.Outcome.REJECTED);
+                    throw new AccessDeniedException("Account does not have messaging access.");
                 }
             }
         }

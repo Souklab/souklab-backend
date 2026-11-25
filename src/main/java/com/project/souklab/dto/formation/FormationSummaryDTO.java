@@ -96,12 +96,17 @@ public class FormationSummaryDTO {
      * @return populated FormationSummaryDTO
      */
     public static FormationSummaryDTO from(Formation formation, long activeEnrollmentsCount) {
+        return from(formation, activeEnrollmentsCount, false);
+    }
+
+    public static FormationSummaryDTO from(Formation formation, long activeEnrollmentsCount,
+                                           boolean authorIsFormateur) {
         if (formation == null) {
             return null;
         }
         return FormationSummaryDTO.builder()
                 .id(formation.getId())
-                .author(FormationAuthorDTO.from(formation.getAuthor()))
+                .author(FormationAuthorDTO.from(formation.getAuthor(), authorIsFormateur))
                 .title(formation.getTitle())
                 .thumbnailUrl(formation.getThumbnailUrl())
                 .location(formation.getLocation())

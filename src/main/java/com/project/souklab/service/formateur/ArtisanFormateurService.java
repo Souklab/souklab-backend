@@ -1,5 +1,7 @@
 package com.project.souklab.service.formateur;
 
+import com.project.souklab.access.CapabilityService;
+import com.project.souklab.access.ViewerContext;
 import com.project.souklab.config.ArtisanProperties;
 import com.project.souklab.dao.ArtisanFormateurRequestRepository;
 import com.project.souklab.dao.ArtisanRepository;
@@ -34,6 +36,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -55,6 +58,7 @@ public class ArtisanFormateurService {
     private final EmailUtil emailUtil;
     private final ArtisanProperties artisanProperties;
     private final Clock clock;
+    private final CapabilityService capabilityService;
 
     /**
      * Submits a new formateur status request for the authenticated artisan.
@@ -73,7 +77,7 @@ public class ArtisanFormateurService {
         Artisan profile = artisanRepository.findById(user.getId())
                 .orElseThrow(() -> new ForbiddenException("Only registered artisans can request Formateur status."));
 
-        if (profile.isTeacher()) {
+        if (isFormateur(user)) {
             throw new ConflictException("You are already an approved Formateur.");
         }
 
@@ -261,7 +265,7 @@ public class ArtisanFormateurService {
         Artisan artisan = artisanRepository.findById(artisanId)
                 .orElseThrow(() -> new ResourceNotFoundException(ERROR_ARTISAN_NOT_FOUND_PREFIX + artisanId));
 
-        if (artisan.isTeacher()) {
+        if (isFormateur(artisan.getUser())) {
             throw new BadRequestException("Artisan is already an approved Formateur.");
         }
 
@@ -301,7 +305,7 @@ public class ArtisanFormateurService {
         Artisan artisan = artisanRepository.findById(artisanId)
                 .orElseThrow(() -> new ResourceNotFoundException(ERROR_ARTISAN_NOT_FOUND_PREFIX + artisanId));
 
-        if (!artisan.isTeacher()) {
+        if (!isFormateur(artisan.getUser())) {
             throw new BadRequestException("Artisan is not currently an approved Formateur.");
         }
 
@@ -312,6 +316,14 @@ public class ArtisanFormateurService {
         notificationService.createForUser(artisanUser, "Your Formateur status has been revoked. Reason: " + dto.getReason(),
                 NotificationType.Formateur.REVOKED, artisanId);
         emailUtil.sendFormateurRevokedEmail(artisanUser.getEmail(), dto.getReason());
+    }
+
+    private boolean isFormateur(User user) {
+        if (user == null) {
+            return false;
+        }
+        ViewerContext context = capabilityService.compute(user, Instant.now(clock));
+        return context.formateur();
     }
 
     /**
@@ -340,12 +352,13 @@ public class ArtisanFormateurService {
     }
 
     private FormateurRequestResponseDTO mapToDTO(ArtisanFormateurRequest req) {
-        User user = req.getArtisan() != null ? req.getArtisan().getUser() : null;
+        Artisan artisan = Optional.ofNullable(req.getArtisan()).orElse(null);
+        User user = Optional.ofNullable(artisan).map(Artisan::getUser).orElse(null);
         String artisanName = resolveArtisanFullName(user);
 
         return FormateurRequestResponseDTO.builder()
                 .id(req.getId())
-                .artisanId(req.getArtisan() != null ? req.getArtisan().getId() : null)
+                .artisanId(Optional.ofNullable(artisan).map(Artisan::getId).orElse(null))
                 .artisanName(artisanName)
                 .artisanEmail(user != null ? user.getEmail() : null)
                 .status(req.getStatus())

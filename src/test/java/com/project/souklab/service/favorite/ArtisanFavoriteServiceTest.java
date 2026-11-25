@@ -1,5 +1,6 @@
 package com.project.souklab.service.favorite;
 
+import com.project.souklab.access.CapabilityService;
 import com.project.souklab.config.FavoritesProperties;
 import com.project.souklab.dao.ArtisanRepository;
 import com.project.souklab.dao.ClientFavoriteArtisanRepository;
@@ -13,6 +14,7 @@ import com.project.souklab.exception.ConflictException;
 import com.project.souklab.exception.ForbiddenException;
 import com.project.souklab.exception.ResourceNotFoundException;
 import com.project.souklab.model.AccountStatus;
+import com.project.souklab.model.AccountRole;
 import com.project.souklab.model.Artisan;
 import com.project.souklab.model.Client;
 import com.project.souklab.model.ClientFavoriteArtisan;
@@ -38,11 +40,14 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -73,6 +78,9 @@ class ArtisanFavoriteServiceTest {
     @Mock
     private ViewerPremiumResolver viewerPremiumResolver;
 
+    @Mock
+    private CapabilityService capabilityService;
+
     private FavoritesProperties favoritesProperties;
     private Clock clock;
     private ArtisanFavoriteService service;
@@ -95,8 +103,10 @@ class ArtisanFavoriteServiceTest {
                 favoriteRepository,
                 favoritesProperties,
                 clock,
-                viewerPremiumResolver
+                viewerPremiumResolver,
+                capabilityService
         );
+        lenient().when(capabilityService.computeAll(anyCollection(), any())).thenReturn(Map.of());
 
         clientUser = User.builder()
                 .email("client@souklab.dz")
@@ -121,6 +131,7 @@ class ArtisanFavoriteServiceTest {
                 .emailVerified(true)
                 .build();
         artisanUser.setId("artisan-user-1");
+        artisanUser.setAccountRole(AccountRole.ARTISAN);
 
         artisan = Artisan.builder()
                 .id(ARTISAN_ID)

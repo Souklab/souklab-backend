@@ -1,6 +1,10 @@
 package com.project.souklab.service.user;
 
 import com.project.souklab.config.AdminProperties;
+import com.project.souklab.access.Capability;
+import com.project.souklab.access.CapabilityService;
+import com.project.souklab.access.PremiumStatus;
+import com.project.souklab.access.ViewerContext;
 import com.project.souklab.dao.ArtisanRepository;
 import com.project.souklab.dao.UserRepository;
 import com.project.souklab.dto.auth.UserResponseDTO;
@@ -9,7 +13,9 @@ import com.project.souklab.exception.BadRequestException;
 import com.project.souklab.exception.ConflictException;
 import com.project.souklab.exception.ResourceNotFoundException;
 import com.project.souklab.model.AccountStatus;
+import com.project.souklab.model.AccountRole;
 import com.project.souklab.model.Artisan;
+import com.project.souklab.model.Client;
 import com.project.souklab.model.AuditLogAction;
 import com.project.souklab.model.NotificationType;
 import com.project.souklab.model.AuthorizationPermission;
@@ -36,6 +42,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Collections;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -44,7 +51,9 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -74,6 +83,9 @@ class UserManagementServiceTest {
     @Mock
     private NotificationService notificationService;
 
+    @Mock
+    private CapabilityService capabilityService;
+
     private Clock clock;
     private UserManagementService userManagementService;
 
@@ -90,8 +102,13 @@ class UserManagementServiceTest {
                 refreshTokenService,
                 notificationService,
                 clock,
-                properties
+                properties,
+                capabilityService
         );
+        lenient().when(capabilityService.compute(any(User.class), any())).thenAnswer(invocation -> context(invocation.getArgument(0)));
+        lenient().when(capabilityService.computeAll(anyCollection(), any())).thenAnswer(invocation ->
+                ((Collection<User>) invocation.getArgument(0)).stream().collect(java.util.stream.Collectors.toMap(
+                        User::getId, this::context)));
     }
 
     /**
@@ -821,6 +838,7 @@ class UserManagementServiceTest {
                 .isVerified(true)
                 .build();
         user.setArtisan(artisan);
+        user.setAccountRole(AccountRole.ARTISAN);
 
         when(userRepository.findById("u-artisan")).thenReturn(Optional.of(user));
 
@@ -837,9 +855,22 @@ class UserManagementServiceTest {
                 .firstName(firstName)
                 .lastName(lastName)
                 .status(status)
+                .accountRole(AccountRole.CLIENT)
                 .permissions(new HashSet<>())
                 .build();
         user.setId(id);
         return user;
+    }
+
+    private ViewerContext context(User user) {
+        AccountRole role = user.getAccountRole();
+        boolean artisanRole = role == AccountRole.ARTISAN;
+        Artisan artisan = user.getArtisan();
+        Client client = user.getClient();
+        boolean premium = artisanRole ? artisan != null && artisan.isPremium()
+                : role == AccountRole.CLIENT && client != null && client.isPremium();
+        boolean formateur = artisanRole && artisan != null && artisan.isTeacher();
+        return new ViewerContext(user.getId(), role, new PremiumStatus(premium, null, false, null, false),
+                Set.<Capability>of(), formateur);
     }
 }

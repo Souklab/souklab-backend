@@ -33,12 +33,17 @@ public class FormationEnrollmentDetailDTO {
      * @return populated FormationEnrollmentDetailDTO
      */
     public static FormationEnrollmentDetailDTO from(FormationEnrollment enrollment, long activeEnrollmentsCount) {
+        return from(enrollment, activeEnrollmentsCount, false);
+    }
+
+    public static FormationEnrollmentDetailDTO from(FormationEnrollment enrollment, long activeEnrollmentsCount,
+                                                    boolean authorIsFormateur) {
         if (enrollment == null) {
             return null;
         }
         return FormationEnrollmentDetailDTO.builder()
                 .enrollment(FormationEnrollmentResponseDTO.from(enrollment))
-                .formation(FormationSummaryDTO.from(enrollment.getFormation(), activeEnrollmentsCount))
+                .formation(FormationSummaryDTO.from(enrollment.getFormation(), activeEnrollmentsCount, authorIsFormateur))
                 .build();
     }
 }

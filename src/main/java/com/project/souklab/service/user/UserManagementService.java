@@ -5,6 +5,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import com.project.souklab.analytics.AnalyticsEvent;
 import com.project.souklab.analytics.AnalyticsMetadata;
+import com.project.souklab.access.CapabilityService;
+import com.project.souklab.access.ViewerContext;
 
 import com.project.souklab.dao.ArtisanRepository;
 import com.project.souklab.analytics.ActivityEventService;
@@ -54,6 +56,7 @@ public class UserManagementService {
     private final NotificationService notificationService;
     private final Clock clock;
     private final AdminProperties adminProperties;
+    private final CapabilityService capabilityService;
     private ActivityEventService activityEventService;
     private DomainEventPublisher eventPublisher;
 
@@ -78,7 +81,7 @@ public class UserManagementService {
         } else {
             page = userRepository.findAll(pageable);
         }
-        return PaginatedResponse.from(page.map(this::mapToDTO));
+        return PaginatedResponse.from(mapUsers(page));
     }
 
     /**
@@ -90,9 +93,8 @@ public class UserManagementService {
      */
     @Transactional(readOnly = true)
     public PaginatedResponse<UserResponseDTO> getPendingUsers(Pageable pageable) {
-        Page<UserResponseDTO> page = userRepository.findByStatusAndDeletedAtIsNull(AccountStatus.PENDING, pageable)
-                .map(this::mapToDTO);
-        return PaginatedResponse.from(page);
+        Page<User> page = userRepository.findByStatusAndDeletedAtIsNull(AccountStatus.PENDING, pageable);
+        return PaginatedResponse.from(mapUsers(page));
     }
 
     /**
@@ -106,7 +108,7 @@ public class UserManagementService {
     public UserResponseDTO getUserById(String userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException(ERROR_USER_NOT_FOUND_PREFIX + userId));
-        return mapToDTO(user);
+        return mapToDTO(user, capabilityService.compute(user, clock.instant()));
     }
 
     /**
@@ -257,7 +259,7 @@ public class UserManagementService {
         if (activityEventService != null) activityEventService.record(type, user.getId(), user.getId(), metadata);
     }
 
-    private UserResponseDTO mapToDTO(User user) {
+    private UserResponseDTO mapToDTO(User user, ViewerContext viewerContext) {
         Set<Permission> roleNames = user.getPermissions().stream()
                 .map(AuthorizationPermission::getPermissionKey)
                 .map(Permission::fromValue)
@@ -277,9 +279,8 @@ public class UserManagementService {
         Artisan artisan = user.getArtisan();
         Client client = user.getClient();
 
-        boolean isPremium = (artisan != null && artisan.isPremium())
-                || (client != null && client.isPremium());
-        boolean isTeacher = artisan != null && artisan.isTeacher();
+        boolean isPremium = viewerContext.premiumStatus().active();
+        boolean isTeacher = viewerContext.formateur();
         boolean isValidated = (artisan != null && artisan.isVerified())
                 || (client != null && client.isVerified());
 
@@ -304,5 +305,10 @@ public class UserManagementService {
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();
+    }
+
+    private Page<UserResponseDTO> mapUsers(Page<User> users) {
+        var contexts = capabilityService.computeAll(users.getContent(), clock.instant());
+        return users.map(user -> mapToDTO(user, contexts.get(user.getId())));
     }
 }

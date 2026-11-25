@@ -134,7 +134,7 @@ class AuthServiceTest {
     @Mock
     private AuditLogService auditLogService;
 
-    private final ProfileResponseMapper profileResponseMapper = new ProfileResponseMapper();
+    private final ProfileResponseMapper profileResponseMapper = com.project.souklab.service.profile.ProfileResponseMapperTestFactory.create();
 
     private JwtProperties jwtProperties;
     private AuthProperties authProperties;

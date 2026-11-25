@@ -1,5 +1,7 @@
 package com.project.souklab.service.subscription;
 
+import com.project.souklab.model.AccountRole;
+
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -87,7 +89,8 @@ public class SubscriptionAccountService {
             subscription.setStatus(SubscriptionStatus.CANCELED);
             recordCancellation(user, subscription.getId());
             cancelPendingPayments(subscriptionId);
-            if (artisanSubscriptions.countByAccountIdAndStatus(user.getId(), SubscriptionStatus.ACTIVE) == 0 && user.getArtisan() != null) user.getArtisan().setPremium(false);
+            if (artisanSubscriptions.countByAccountIdAndStatus(user.getId(), SubscriptionStatus.ACTIVE) == 0
+                    && user.getAccountRole() == AccountRole.ARTISAN) user.getArtisan().setPremium(false);
             return;
         }
         ClientSubscription subscription = clientSubscriptions.findWithLockById(subscriptionId).orElseThrow(() -> new ResourceNotFoundException("Subscription not found"));
@@ -96,7 +99,8 @@ public class SubscriptionAccountService {
         subscription.setStatus(SubscriptionStatus.CANCELED);
         recordCancellation(user, subscription.getId());
         cancelPendingPayments(subscriptionId);
-        if (clientSubscriptions.countByAccountIdAndStatus(user.getId(), SubscriptionStatus.ACTIVE) == 0 && user.getClient() != null) user.getClient().setPremium(false);
+        if (clientSubscriptions.countByAccountIdAndStatus(user.getId(), SubscriptionStatus.ACTIVE) == 0
+                && user.getAccountRole() == AccountRole.CLIENT) user.getClient().setPremium(false);
     }
 
     private void cancelPendingPayments(String subscriptionId) {

@@ -49,6 +49,8 @@ class ClientFavoritesMigrationTest {
 
                 statement.executeUpdate("INSERT INTO users (id, email, password, status, email_verified, failed_login_attempts, created_at, updated_at) "
                         + "VALUES ('admin-user-1', 'admin1@test.com', 'pwd', 'ACTIVE', 1, 0, CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6))");
+                statement.executeUpdate("INSERT INTO user_permissions (user_id, permission_id) "
+                        + "SELECT 'admin-user-1', id FROM permissions WHERE permission_key = 'permission:admin:users'");
             }
 
             Flyway.configure()
@@ -60,7 +62,11 @@ class ClientFavoritesMigrationTest {
             try (Connection connection = database.createConnection("");
                  Statement statement = connection.createStatement()) {
 
-                assertThat(migrationVersion(statement)).isEqualTo("23");
+                assertThat(migrationVersion(statement)).isEqualTo("24");
+                assertThat(columnExists(statement, "users", "account_role")).isTrue();
+                assertThat(userRole(statement, "client-user-1")).isEqualTo("CLIENT");
+                assertThat(userRole(statement, "artisan-user-1")).isEqualTo("ARTISAN");
+                assertThat(userRole(statement, "admin-user-1")).isEqualTo("ADMIN");
                 assertThat(tableExists(statement, "client_favorite_artisans")).isTrue();
                 assertThat(columnExists(statement, "client_favorite_artisans", "id")).isTrue();
                 assertThat(columnExists(statement, "client_favorite_artisans", "client_id")).isTrue();
@@ -114,6 +120,13 @@ class ClientFavoritesMigrationTest {
         try (ResultSet result = statement.executeQuery("SELECT COUNT(*) FROM `" + table + "` WHERE `" + column + "` = '" + value + "'")) {
             result.next();
             return result.getInt(1) == 1;
+        }
+    }
+
+    private String userRole(Statement statement, String userId) throws SQLException {
+        try (ResultSet result = statement.executeQuery("SELECT account_role FROM users WHERE id = '" + userId + "'")) {
+            assertThat(result.next()).isTrue();
+            return result.getString(1);
         }
     }
 
