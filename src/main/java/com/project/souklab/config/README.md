@@ -32,7 +32,8 @@ Centralizes framework configurations, custom Spring Beans, security filter setup
 | [`DataSeeder`](DataSeeder.java) | `@Component`, `CommandLineRunner` | Seeds canonical permissions and reference data; creates an admin only when `APP_ADMIN_BOOTSTRAP_ENABLED=true`. |
 | [`ConfigurationPolicyValidator`](ConfigurationPolicyValidator.java) | `@Component` | Rejects invalid limits, MIME policies, CORS credentials/origin combinations, and unsafe production storage settings. |
 | [`WebSocketConfig`](WebSocketConfig.java) | `@Configuration`, `@EnableWebSocketMessageBroker` | Configures STOMP messaging, `/ws` endpoint, user destination prefixes, and external broker relays. |
-| [WebSocketAuthInterceptor](WebSocketAuthInterceptor.java) | ChannelInterceptor | Authenticates STOMP CONNECT and STOMP connect frames with Bearer JWTs and rejects client STOMP frames without an authenticated principal. |
+| [`WebSocketAuthInterceptor`](WebSocketAuthInterceptor.java) | `ChannelInterceptor` | Authenticates STOMP CONNECT frames, permits client subscriptions only to user-scoped queue/presence destinations, permits SEND only to `/app/**`, and rechecks JWT/account status on each SEND. |
+| [`WebSocketSessionRegistry`](WebSocketSessionRegistry.java) | `@Component`, scheduled task | Tracks transport sessions and closes sessions whose JWT or account status is revoked, with checks every five seconds. |
 | [`WebClientConfig`](WebClientConfig.java) | Class | Foundation configuration class for external HTTP client integrations. |
 | [`OpenApiConfiguration`](OpenApiConfiguration.java) | `@Configuration` | Configures Swagger/OpenAPI documentation definitions, security schemes, and server URLs. |
 | [`Phase9JacksonConfiguration`](Phase9JacksonConfiguration.java) | `@Configuration` | Custom Jackson serializers and deserializers for financial, audit, and pagination types. |
