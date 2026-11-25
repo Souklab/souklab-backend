@@ -39,6 +39,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -98,7 +99,7 @@ class ArtisanReviewServiceTest {
         assertThat(result.getRating()).isEqualByComparingTo("4.20");
         assertThat(subject.getRating()).isZero();
         assertThat(subject.getReviewsCount()).isZero();
-        verify(artisanRepository, org.mockito.Mockito.never()).save(subject);
+        verify(artisanRepository, never()).save(subject);
     }
 
     @Test
@@ -134,7 +135,7 @@ class ArtisanReviewServiceTest {
         assertThat(result.getComment()).isEqualTo("Much better now");
         assertThat(softDeleted.getStatus()).isEqualTo(ReviewStatus.PUBLISHED);
         assertThat(softDeleted.getDeletedAt()).isNull();
-        verify(artisanRepository, org.mockito.Mockito.never()).save(subject);
+        verify(artisanRepository, never()).save(subject);
     }
 
     @Test

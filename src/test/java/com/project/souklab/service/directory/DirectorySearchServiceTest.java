@@ -48,6 +48,7 @@ import org.hibernate.search.mapper.orm.Search;
 import org.hibernate.search.mapper.orm.session.SearchSession;
 import org.hibernate.search.engine.search.sort.dsl.FieldSortOptionsStep;
 import org.hibernate.search.engine.search.sort.dsl.SearchSortFactory;
+import org.hibernate.search.engine.search.sort.dsl.ScoreSortOptionsStep;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -512,7 +513,7 @@ class DirectorySearchServiceTest {
         FieldSortOptionsStep fieldStep = mock(FieldSortOptionsStep.class);
         Mockito.doReturn(fieldStep).when(sortFactory).field(any(String.class));
         Mockito.doReturn(fieldStep).when(fieldStep).desc();
-        Mockito.doReturn(mock(org.hibernate.search.engine.search.sort.dsl.ScoreSortOptionsStep.class))
+        Mockito.doReturn(mock(ScoreSortOptionsStep.class))
                 .when(sortFactory).score();
 
         DirectorySearchFilterDTO filter = DirectorySearchFilterDTO.builder().keyword("poterie").build();
